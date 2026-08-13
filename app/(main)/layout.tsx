@@ -29,13 +29,9 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       {/* HEADER */}
-      <header
-        className="sticky top-0 z-50 flex h-16 items-center 
-         bg-white dark:bg-gray-900 
-         border-b border-gray-200 dark:border-gray-700 shadow-sm px-6"
-      >
+      <header className="sticky top-0 z-50 flex h-16 w-full items-center border-b border-gray-200 bg-white px-3 shadow-sm dark:border-gray-700 dark:bg-gray-900 sm:px-6">
         <div className="w-full flex items-center justify-between relative">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center">
@@ -66,8 +62,8 @@ export default function MainLayout({
       </header>
 
       {/* BODY WITH SIDEBAR */}
-      <div className="flex flex-1">
-        <main className="flex-1 px-4 py-1">{children}</main>
+      <div className="flex min-w-0 flex-1">
+        <main className="min-w-0 flex-1 px-4 py-1">{children}</main>
         <CrowdChatWidget />
       </div>
 
