@@ -10,7 +10,7 @@ export default function HeaderNav() {
   return (
     <nav
       className="
-        absolute left-20 right-36 flex items-center justify-center gap-4
+        absolute left-20 right-36 flex items-center justify-center gap-6
         text-sm font-medium
         md:left-1/2 md:right-auto md:-translate-x-1/2 md:gap-8
         lg:gap-10
