@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, UserCircle, Loader2 } from "lucide-react"; // Added Loader icon
+import { LayoutDashboard, Loader2, LogOut, UserCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
@@ -39,6 +39,10 @@ export default function UserMenu() {
   const user = data.user;
   // Use optional chaining and provide a fallback to avoid splitting an undefined name
   const firstName = user.name?.trim().split(/\s+/)[0] || "User";
+
+  const role = (user as typeof user & { role?: string }).role;
+
+  const canAccessAdmin = role === "admin" || role === "staff";
 
   const handleLogout = async () => {
     //Get session BEFORE signOut
@@ -94,6 +98,17 @@ export default function UserMenu() {
 
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 z-50">
+          {canAccessAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+              onClick={() => setOpen(false)}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
+
           <Link
             href="/profile"
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
