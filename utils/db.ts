@@ -38,15 +38,6 @@ export async function connect() {
   }
 }
 
-export async function disconnect() {
-  if (!cached.conn) return;
 
-  try {
-    await mongoose.disconnect();
-  } finally {
-    cached.conn = null;
-    cached.promise = null;
-  }
-}
 
-export default { connect, disconnect };
+export default { connect };
