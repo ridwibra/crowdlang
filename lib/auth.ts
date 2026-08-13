@@ -11,7 +11,7 @@ const dbMongo = client.db();
 
 export const auth = betterAuth({
   appName: "CrowdLang",
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: process.env.BASE_URL,
  trustedOrigins: [
   
   "https://crowdlang.org",
@@ -26,7 +26,7 @@ export const auth = betterAuth({
         // 60 seconds * 60 minutes * 48 hours = 172,800 seconds
     expiresIn: 60 * 60 * 48, 
     sendVerificationEmail: async ({ user, url, token }, request) => {
-        const base = process.env.BETTER_AUTH_URL?.trim().replace(/\/+$/, "");
+        const base = process.env.BASE_URL?.trim().replace(/\/+$/, "");
   const customVerifyUrl = `${base}/verify/${token}`;
       const emailPromise = sendEmail(
         user.email,
