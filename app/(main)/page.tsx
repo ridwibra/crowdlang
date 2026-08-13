@@ -516,24 +516,24 @@ export default function Home() {
       <DotLoaderSpinner loading={saving} showText text="Saving..." />
 
       <section className="flex flex-col gap-5 border-b border-slate-200 pb-6 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-600 dark:text-teal-400">
             CrowdLang workspace
           </p>
 
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
             Language Table
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Search, compare, edit, and export translations across your available
-            languages.
+            Search, compare, edit, and export language data across your
+            available languages.
           </p>
         </div>
 
         <Link
           href="/addLanguage"
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-teal-600 hover:to-cyan-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
+          className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-teal-600 hover:to-cyan-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-slate-950"
         >
           <span className="mr-2 text-lg leading-none">+</span>
           Add language
