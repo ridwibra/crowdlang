@@ -11,7 +11,7 @@ export default function HeaderNav() {
     <nav
       className="
         flex items-center gap-10 text-sm font-medium
-        absolute left-1/2 -translate-x-1/2
+        absolute left-1/2 -translate-x-1/2 mr-2
       "
     >
       {/* HOME */}
