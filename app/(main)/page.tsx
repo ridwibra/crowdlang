@@ -799,64 +799,49 @@ export default function Home() {
           </span>
         </div>
 
-        {filteredRows.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl text-slate-400 dark:bg-slate-800">
-              ⌕
-            </div>
+        <div className="max-h-[650px] overflow-auto">
+          <table className="min-w-full border-separate border-spacing-0 text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
+              <tr>
+                <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                  Actions
+                </th>
 
-            <h3 className="mt-4 font-bold text-slate-900 dark:text-white">
-              No translations found
-            </h3>
+                <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                  English
+                </th>
 
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
-              Try changing your search, selected text types, or visible
-              languages.
-            </p>
-          </div>
-        ) : (
-          <div className="max-h-[650px] overflow-auto">
-            <table className="min-w-full border-separate border-spacing-0 text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
-                <tr>
-                  <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                    Actions
-                  </th>
-
-                  <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                    English
-                  </th>
-
-                  {visibleLanguages.map((language) => (
-                    <th
-                      key={language._id}
-                      className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                {visibleLanguages.map((language) => (
+                  <th
+                    key={language._id}
+                    className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                  >
+                    <Link
+                      href={`/${encodeURIComponent(language.name)}`}
+                      title={`View ${language.name} language details`}
+                      className="group inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-bold normal-case tracking-normal text-teal-700 transition hover:-translate-y-0.5 hover:border-teal-500 hover:bg-teal-600 hover:text-white hover:shadow-sm dark:border-teal-500/30 dark:bg-teal-950/40 dark:text-teal-300"
                     >
-                      <Link
-                        href={`/${encodeURIComponent(language.name)}`}
-                        title={`View ${language.name} language details`}
-                        className="group inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-bold normal-case tracking-normal text-teal-700 transition hover:-translate-y-0.5 hover:border-teal-500 hover:bg-teal-600 hover:text-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:border-teal-500/30 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:border-teal-400 dark:hover:bg-teal-500 dark:hover:text-slate-950 dark:focus:ring-offset-slate-900"
-                      >
-                        <span>{language.name}</span>
+                      <span>{language.name}</span>
+                      <span aria-hidden="true">↗</span>
+                    </Link>
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-                        <span
-                          aria-hidden="true"
-                          className="text-sm leading-none transition-transform group-hover:translate-x-0.5"
-                        >
-                          ↗
-                        </span>
-
-                        <span className="sr-only">
-                          View {language.name} language details
-                        </span>
-                      </Link>
-                    </th>
-                  ))}
+            <tbody>
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={visibleLanguages.length + 2}
+                    className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400"
+                  >
+                    No translations found. Add a translation to begin populating
+                    this table.
+                  </td>
                 </tr>
-              </thead>
-
-              <tbody>
-                {filteredRows.map((row, rowIndex) => {
+              ) : (
+                filteredRows.map((row, rowIndex) => {
                   const rowKey = `${row.english}-${rowIndex}`;
 
                   return (
@@ -875,7 +860,7 @@ export default function Home() {
                           aria-haspopup="menu"
                           aria-expanded={actionsOpenFor === rowKey}
                           onClick={() => toggleActionsMenu(rowKey)}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 dark:bg-slate-600 dark:hover:bg-slate-500 dark:focus:ring-offset-slate-900"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
                         >
                           Actions
                           <span aria-hidden="true">▾</span>
@@ -900,11 +885,11 @@ export default function Home() {
                       ))}
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
       {typeof document !== "undefined" &&
         activeActionRow &&
