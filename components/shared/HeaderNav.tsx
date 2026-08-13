@@ -10,50 +10,43 @@ export default function HeaderNav() {
   return (
     <nav
       className="
-        flex items-center gap-10 text-sm font-medium
-        absolute left-1/2 -translate-x-1/2
+        absolute left-16 right-28 flex items-center justify-center gap-5
+        text-sm font-medium
+        md:left-1/2 md:right-auto md:-translate-x-1/2 md:gap-8
+        lg:gap-10
       "
     >
-      {/* HOME */}
       <Link
         href="/"
-        className={`flex items-center gap-2 transition
-          ${
-            pathname === "/"
-              ? "text-blue-600 dark:text-blue-400 font-semibold"
-              : "hover:text-blue-600 dark:hover:text-blue-400"
-          }
-        `}
+        className={`flex items-center gap-2 transition ${
+          pathname === "/"
+            ? "font-semibold text-blue-600 dark:text-blue-400"
+            : "hover:text-blue-600 dark:hover:text-blue-400"
+        }`}
       >
         <Home size={20} />
         <span className="hidden md:inline">Home</span>
       </Link>
 
-      {/* REELS */}
       <Link
         href="/reel"
-        className={`flex items-center gap-2 transition
-          ${
-            pathname.startsWith("/reel")
-              ? "text-blue-600 dark:text-blue-400 font-semibold"
-              : "hover:text-blue-600 dark:hover:text-blue-400"
-          }
-        `}
+        className={`flex items-center gap-2 transition ${
+          pathname.startsWith("/reel")
+            ? "font-semibold text-blue-600 dark:text-blue-400"
+            : "hover:text-blue-600 dark:hover:text-blue-400"
+        }`}
       >
         <Film size={20} />
         <span className="hidden md:inline">Reels</span>
       </Link>
 
-      {/* MAP */}
       <Link
         href="/map"
-        className={`flex items-center gap-2 transition mr-3
-          ${
-            pathname.startsWith("/map")
-              ? "text-blue-600 dark:text-blue-400 font-semibold"
-              : "hover:text-blue-600 dark:hover:text-blue-400"
-          }
-        `}
+        className={`flex items-center gap-2 transition ${
+          pathname.startsWith("/map")
+            ? "font-semibold text-blue-600 dark:text-blue-400"
+            : "hover:text-blue-600 dark:hover:text-blue-400"
+        }`}
       >
         <Map size={20} />
         <span className="hidden md:inline">Map</span>
