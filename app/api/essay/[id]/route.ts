@@ -97,26 +97,26 @@ export async function PUT(
           .filter((t: string) => t.length > 0)
       : [];
 
-    const updated = await Essay.findByIdAndUpdate(
-      id,
-      {
-        title,
-        category,
-        body,
-        translationTitle,
-        translationBody,
-        images: safeImages,
-        status,
-        level,
-        tags: safeTags,
-        language,
-        $addToSet: { editedBy: mongoUser._id },
-      },
-      {
-        returnDocument: "after",
-        runValidators: true,
-      }
-    )
+const updated = await Essay.findByIdAndUpdate(
+  id,
+  {
+    title: title.trim(),
+    category: category?.trim() || "",
+    body: body || "",
+    translationTitle: translationTitle?.trim() || "",
+    translationBody: translationBody || "",
+    images: safeImages,
+    status: status || "pending",
+    level: level || undefined,
+    tags: safeTags,
+    language,
+    $addToSet: { editedBy: mongoUser._id },
+  },
+  {
+    returnDocument: "after",
+    runValidators: true,
+  }
+)
       .populate({ path: "author", select: "name email avatar", model: User })
       .populate({ path: "editedBy", select: "name email", model: User })
       .populate({ path: "approvedBy", select: "name email", model: User })

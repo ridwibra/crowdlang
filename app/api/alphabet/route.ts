@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (!session) {
       return NextResponse.json(
-        { message: "Unauthorized." },
+        { message: "You need to log in to add a new alphabet" },
         { status: 401 },
       );
     }

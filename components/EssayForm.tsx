@@ -208,10 +208,10 @@ export default function EssayForm({
       .filter((t: string) => t.length > 0);
 
     const payload = {
-      title,
-      translationTitle,
-      category,
-      level,
+      title: title.trim(),
+      translationTitle: translationTitle.trim(),
+      category: category.trim(),
+      level: level || undefined,
       tags: safeTags,
       body: bodyEditor?.getHTML() || "",
       translationBody: translationEditor?.getHTML() || "",

@@ -13,7 +13,7 @@ export default async function MapPage() {
   }));
 
   return (
-    <main className="flex flex-col">
+    <main className="min-w-0 w-full max-w-full">
       <MapWorld languages={languages} />
     </main>
   );

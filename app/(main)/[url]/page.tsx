@@ -78,6 +78,7 @@ export default async function LanguageDetailPage({
   const essaySearchFilter = essaySearchQuery
     ? {
         language: languageDoc._id,
+        status: "approved",
         $or: [
           {
             title: {
@@ -125,6 +126,7 @@ export default async function LanguageDetailPage({
       }
     : {
         language: languageDoc._id,
+        // status: "approved",
       };
 
   const essaysDocs = await Essay.find(essaySearchFilter)
@@ -309,14 +311,12 @@ export default async function LanguageDetailPage({
                     {alphabets.length} / {MAX_ALPHABETS} added
                   </span>
 
-                  {isStaff && (
-                    <AlphabetFormToggle
-                      language={language}
-                      alphabet={null}
-                      disabled={!canAddAlphabet}
-                      disabledMessage={`A language can have up to ${MAX_ALPHABETS} alphabets.`}
-                    />
-                  )}
+                  <AlphabetFormToggle
+                    language={language}
+                    alphabet={null}
+                    disabled={!canAddAlphabet}
+                    disabledMessage={`A language can have up to ${MAX_ALPHABETS} alphabets.`}
+                  />
                 </div>
               </div>
 
@@ -397,15 +397,13 @@ export default async function LanguageDetailPage({
                             </div>
                           )}
 
-                          {isStaff && (
-                            <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-                              <AlphabetFormToggle
-                                language={language}
-                                alphabet={alphabet}
-                              />
-                              <DeleteAlphabetButton id={alphabet._id} />
-                            </div>
-                          )}
+                          <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                            <AlphabetFormToggle
+                              language={language}
+                              alphabet={alphabet}
+                            />
+                            <DeleteAlphabetButton id={alphabet._id} />
+                          </div>
                         </div>
                       </article>
                     ))}
@@ -454,7 +452,7 @@ export default async function LanguageDetailPage({
                           }`}
                     </span>
 
-                    {isStaff && <EssayFormToggle language={language} />}
+                    <EssayFormToggle language={language} />
                   </div>
                 </div>
 
@@ -600,12 +598,10 @@ export default async function LanguageDetailPage({
                               )}
                             </div>
 
-                            {isStaff && (
-                              <EssayFormToggle
-                                language={language}
-                                essay={essay}
-                              />
-                            )}
+                            <EssayFormToggle
+                              language={language}
+                              essay={essay}
+                            />
                           </div>
 
                           <div className="mt-6 grid gap-6 xl:grid-cols-2">
@@ -683,7 +679,7 @@ export default async function LanguageDetailPage({
                                 : "No update date available"}
                             </p>
 
-                            {isStaff && <DeleteEssayButton id={essay._id} />}
+                            <DeleteEssayButton id={essay._id} />
                           </div>
                         </div>
                       </article>

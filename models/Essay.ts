@@ -73,11 +73,11 @@ const essaySchema = new Schema<EssayType>(
       },
     ],
 
-    status: {
-      type: String,
-      enum: ["draft", "pending", "published", "rejected"],
-      default: "pending",
-    },
+   status: {
+  type: String,
+  enum: ["draft", "pending", "approved", "published", "rejected"],
+  default: "pending",
+},
 
     level: {
       type: String,

@@ -13,8 +13,8 @@ export async function GET() {
     await db.connect();
 
     const essays = await Essay.find({
-      status: "published",
-    })
+  status: "approved",
+})
       .populate({ path: "author", select: "name email avatar", model: User })
       .populate({ path: "editedBy", select: "name email", model: User })
       .populate({ path: "approvedBy", select: "name email", model: User })
@@ -89,19 +89,19 @@ export async function POST(request: NextRequest) {
           .filter((t: string) => t.length > 0)
       : [];
 
-    const essay = await Essay.create({
-      title,
-      category,
-      body, // HTML from TipTap
-      translationTitle,
-      translationBody, // HTML from TipTap
-      images: safeImages,
-      status: status || "pending",
-      level,
-      tags: safeTags,
-      language,
-      author: mongoUser._id,
-    });
+   const essay = await Essay.create({
+  title: title.trim(),
+  category: category?.trim() || "",
+  body: body || "",
+  translationTitle: translationTitle?.trim() || "",
+  translationBody: translationBody || "",
+  images: safeImages,
+  status: status || "pending",
+  level: level || undefined,
+  tags: safeTags,
+  language,
+  author: mongoUser._id,
+});
 
     return NextResponse.json(
       { message: "Essay created successfully.", essay },

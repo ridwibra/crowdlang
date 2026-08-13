@@ -225,7 +225,7 @@ export default function MapWorld({ languages }: { languages: LanguageData[] }) {
   }, [highlightedISO]);
 
   return (
-    <div className="flex flex-col">
+    <div className="min-w-0 w-full max-w-full">
       <div className="flex justify-center py-2">
         <input
           list="languages"
