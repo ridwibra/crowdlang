@@ -55,9 +55,7 @@ export async function GET(
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function PUT(
@@ -201,8 +199,6 @@ export async function PUT(
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
   }
 }
 
@@ -251,7 +247,5 @@ export async function DELETE(
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

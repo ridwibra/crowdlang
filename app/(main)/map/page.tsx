@@ -7,8 +7,6 @@ export default async function MapPage() {
 
   const languagesRaw = await Language.find().lean();
 
-  await db.disconnect();
-
   const languages = languagesRaw.map((language: any) => ({
     name: language.name,
     countries: language.countries || [],

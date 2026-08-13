@@ -224,7 +224,5 @@ export async function POST(
       { error: "Failed to submit language role request." },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

@@ -107,7 +107,5 @@ export async function GET(
       { error: "Failed to fetch language users" },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
   }
 }

@@ -144,7 +144,5 @@ export async function PATCH(
       { error: "Failed to update language role" },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

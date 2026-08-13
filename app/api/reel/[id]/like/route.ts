@@ -78,9 +78,7 @@ export async function POST(
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function DELETE(
@@ -141,7 +139,5 @@ export async function DELETE(
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

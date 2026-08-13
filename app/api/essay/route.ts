@@ -112,7 +112,5 @@ export async function POST(request: NextRequest) {
       { message: "Failed to create essay." },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

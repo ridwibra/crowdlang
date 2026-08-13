@@ -32,9 +32,7 @@ export async function GET(
       { message: error.message || "Failed to fetch comments" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function POST(
@@ -81,7 +79,5 @@ export async function POST(
       { message: error.message || "Failed to add comment" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

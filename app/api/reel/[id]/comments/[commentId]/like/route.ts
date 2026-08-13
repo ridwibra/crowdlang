@@ -42,9 +42,7 @@ export async function POST(
       { message: error.message || "Failed to like comment" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 export async function DELETE(
   request: NextRequest,
@@ -83,8 +81,6 @@ export async function DELETE(
       { message: error.message || "Failed to unlike comment" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
   }
 }
 

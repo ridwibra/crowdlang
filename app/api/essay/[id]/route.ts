@@ -37,9 +37,7 @@ export async function GET(
       { message: "Failed to fetch essay." },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 /* UPDATE ESSAY */
@@ -141,8 +139,6 @@ export async function PUT(
       { message: "Failed to update essay." },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
   }
 }
 
@@ -182,7 +178,5 @@ export async function DELETE(
       { message: "Failed to delete essay." },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

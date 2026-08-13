@@ -42,9 +42,7 @@ export async function GET() {
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function POST(request: NextRequest) {
@@ -164,7 +162,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

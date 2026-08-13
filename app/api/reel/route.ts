@@ -24,9 +24,7 @@ export async function GET() {
       { message: error.message || "Failed to fetch reels" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function POST(request: NextRequest) {
@@ -76,7 +74,5 @@ export async function POST(request: NextRequest) {
       { message: error.message || "Failed to create reel" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

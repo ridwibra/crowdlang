@@ -40,9 +40,7 @@ export async function PUT(
       { message: error.message || "Failed to update comment" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 
@@ -78,8 +76,6 @@ export async function DELETE(
       { message: error.message || "Failed to delete comment" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 

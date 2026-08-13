@@ -32,9 +32,7 @@ export async function GET(
       { message: error.message || "Failed to fetch row" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function PUT(
@@ -103,9 +101,7 @@ export async function PUT(
       { message: error.message || "Failed to update row" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
 
 export async function DELETE(
@@ -144,7 +140,5 @@ export async function DELETE(
       { message: error.message || "Failed to delete row" },
       { status: 500 }
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

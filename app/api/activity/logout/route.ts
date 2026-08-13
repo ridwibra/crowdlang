@@ -70,7 +70,5 @@ export async function POST() {
       },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }

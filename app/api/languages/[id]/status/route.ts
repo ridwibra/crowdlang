@@ -63,7 +63,5 @@ export async function PATCH(
       { error: "Failed to update language status" },
       { status: 500 },
     );
-  } finally {
-    await db.disconnect();
-  }
+  } 
 }
