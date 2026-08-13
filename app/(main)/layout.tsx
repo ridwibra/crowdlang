@@ -29,53 +29,71 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+    <div className="flex min-h-screen min-w-0 w-full flex-col overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       {/* HEADER */}
       <header
-        className="sticky top-0 z-50 flex h-16 items-center 
-         bg-white dark:bg-gray-900 
-         border-b border-gray-200 dark:border-gray-700 shadow-sm px-6"
+        className="
+          sticky top-0 z-50
+          flex h-16 w-full shrink-0 items-center
+          border-b border-gray-200 bg-white px-3 shadow-sm
+          dark:border-gray-700 dark:bg-gray-900
+          sm:px-6
+        "
       >
-        <div className="w-full flex items-center justify-between relative">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center">
+        <div className="flex min-w-0 w-full items-center justify-between gap-2">
+          {/* Logo / Brand */}
+          <div className="flex min-w-0 shrink-0 items-center gap-3">
+            <Link href="/" className="flex shrink-0 items-center">
               <Image
                 src="/images/logo.png"
                 alt={`${SITE_NAME} logo`}
                 width={64}
                 height={64}
-                className="h-14 w-auto lg:h-16 object-contain dark:invert"
+                className="h-12 w-auto object-contain dark:invert sm:h-14 lg:h-16"
                 priority
               />
             </Link>
 
             <Link
               href="/"
-              className={`hidden lg:block text-3xl font-bold ${pacifico.className}`}
+              className={`hidden truncate text-3xl font-bold lg:block ${pacifico.className}`}
             >
               {SITE_NAME}
             </Link>
           </div>
 
-          <HeaderNav />
-          <div className="ml-4 flex shrink-0 items-center gap-4 px-1 sm:ml-6 sm:px-2">
+          {/* Navigation */}
+          <div className="min-w-0 flex-1">
+            <HeaderNav />
+          </div>
+
+          {/* User controls */}
+          <div className="ml-1 flex shrink-0 items-center gap-2 px-0 sm:ml-4 sm:gap-4 sm:px-2">
             <ThemeToggle />
             <UserMenu />
           </div>
         </div>
       </header>
 
-      {/* BODY WITH SIDEBAR */}
-      <div className="flex flex-1">
-        <main className="flex-1 px-4 py-1">{children}</main>
-        <CrowdChatWidget />
+      {/* BODY */}
+      <div className="relative flex min-h-0 min-w-0 flex-1">
+        <main className="min-h-0 min-w-0 w-full flex-1 px-3 py-1 sm:px-4">
+          {children}
+        </main>
+
+        {/* Keep this from affecting page width */}
+        <div className="pointer-events-none fixed inset-0 z-40">
+          <div className="pointer-events-auto">
+            <CrowdChatWidget />
+          </div>
+        </div>
       </div>
 
       {/* FOOTER */}
-      <footer className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-2 text-sm">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
+      <footer className="w-full shrink-0 border-t border-gray-200 bg-white px-4 py-4 text-sm dark:border-gray-700 dark:bg-gray-900 sm:px-6">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <Link href="/" className="flex items-center gap-3">
               <Image
                 src="/images/logo.png"
@@ -84,16 +102,18 @@ export default function MainLayout({
                 height={48}
                 className="h-12 w-auto object-contain dark:invert"
               />
-              <span className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+
+              <span className="truncate text-xl font-semibold text-gray-800 dark:text-gray-200">
                 {SITE_NAME}
               </span>
             </Link>
 
-            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            <p className="leading-relaxed text-gray-600 dark:text-gray-400">
               Making the languages of the world visible, accessible, and
               beautifully organized.
             </p>
           </div>
+
           {/* Discover */}
           <div>
             <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
@@ -140,12 +160,13 @@ export default function MainLayout({
           </div>
 
           {/* Contact */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+          <div className="min-w-0">
+            <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
               Contact
             </h3>
+
             <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-              <li>
+              <li className="break-words">
                 <a
                   href={`mailto:${SENDER_EMAIL_ADDRESS}`}
                   aria-label={`Email ${SITE_NAME}`}
@@ -154,23 +175,15 @@ export default function MainLayout({
                   {SENDER_EMAIL_ADDRESS}
                 </a>
               </li>
-              {/* <li>
-                <a
-                  href="tel:+1234567890"
-                  className="hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  +1 (234) 567‑890
-                </a>
-              </li> */}
-              {/* <li>Athens, Ohio, USA</li> */}
             </ul>
           </div>
 
           {/* Legal */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+            <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
               Legal
             </h3>
+
             <ul className="space-y-2 text-gray-600 dark:text-gray-400">
               <li>
                 <Link
@@ -180,6 +193,7 @@ export default function MainLayout({
                   Terms of Service
                 </Link>
               </li>
+
               <li>
                 <Link
                   href="/footer/privacy"
@@ -188,6 +202,7 @@ export default function MainLayout({
                   Privacy Policy
                 </Link>
               </li>
+
               <li>
                 <Link
                   href="/footer/delete"
@@ -201,15 +216,15 @@ export default function MainLayout({
 
           {/* Share */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+            <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
               Share
             </h3>
+
             <FooterShare />
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center text-gray-600 dark:text-gray-400">
+        <div className="mt-4 border-t border-gray-200 pt-3 text-center text-gray-600 dark:border-gray-700 dark:text-gray-400">
           © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
         </div>
       </footer>

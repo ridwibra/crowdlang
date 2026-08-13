@@ -512,7 +512,7 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+    <main className="min-w-0 w-full max-w-full space-y-6 overflow-x-hidden px-3 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <DotLoaderSpinner loading={saving} showText text="Saving..." />
 
       <section className="flex flex-col gap-5 border-b border-slate-200 pb-6 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
@@ -780,9 +780,9 @@ export default function Home() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-          <div>
+      <section className="w-full min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-800">
+          <div className="min-w-0">
             <h2 className="font-bold text-slate-900 dark:text-white">
               Translation results
             </h2>
@@ -793,12 +793,13 @@ export default function Home() {
             </p>
           </div>
 
-          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="w-fit shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {visibleLanguages.length}{" "}
             {visibleLanguages.length === 1 ? "language" : "languages"} visible
           </span>
         </div>
 
+        {/* Horizontal/vertical scrolling belongs HERE */}
         <div className="w-full min-w-0 max-w-full max-h-[650px] overflow-x-auto overflow-y-auto">
           <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
