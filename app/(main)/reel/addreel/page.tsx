@@ -5,7 +5,6 @@ import AddReelForm from "@/components/AddReelForm";
 export default async function AddReelPage() {
   await db.connect();
   const languagesRaw = await Language.find().lean();
-  await db.disconnect();
 
   const languages = languagesRaw.map((lang: any) => ({
     _id: lang._id.toString(),
