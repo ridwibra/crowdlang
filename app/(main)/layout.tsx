@@ -58,7 +58,7 @@ export default function MainLayout({
           </div>
 
           <HeaderNav />
-          <div className="flex items-center gap-4 px-2">
+          <div className="ml-4 flex shrink-0 items-center gap-4 px-1 sm:ml-6 sm:px-2">
             <ThemeToggle />
             <UserMenu />
           </div>
