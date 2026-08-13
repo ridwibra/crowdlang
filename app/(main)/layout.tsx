@@ -154,15 +154,15 @@ export default function MainLayout({
                   {SENDER_EMAIL_ADDRESS}
                 </a>
               </li>
-              <li>
+              {/* <li>
                 <a
                   href="tel:+1234567890"
                   className="hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   +1 (234) 567‑890
                 </a>
-              </li>
-              <li>Athens, Ohio, USA</li>
+              </li> */}
+              {/* <li>Athens, Ohio, USA</li> */}
             </ul>
           </div>
 
