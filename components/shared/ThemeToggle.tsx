@@ -21,7 +21,7 @@ export default function ThemeToggle() {
       aria-label="Toggle theme"
       className="
         relative flex items-center justify-center
-        w-10 h-10 rounded-xl
+        w-12 h-12 rounded-xl
         bg-gray-100 dark:bg-gray-800
         border border-gray-300 dark:border-gray-700
         shadow-sm dark:shadow-md
