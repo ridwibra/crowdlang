@@ -533,7 +533,7 @@ export default function Home() {
 
         <Link
           href="/addLanguage"
-          className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-teal-600 hover:to-cyan-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 sm:w-auto dark:focus:ring-offset-slate-950"
+          className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center self-start rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-teal-600 hover:to-cyan-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
         >
           <span className="mr-2 text-lg leading-none">+</span>
           Add language
