@@ -799,8 +799,8 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="max-h-[650px] overflow-auto">
-          <table className="min-w-full border-separate border-spacing-0 text-sm">
+        <div className="w-full min-w-0 max-w-full max-h-[650px] overflow-x-auto overflow-y-auto">
+          <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
               <tr>
                 <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
