@@ -799,7 +799,7 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="w-full min-w-0 max-w-[calc(100vw-2rem)] max-h-[650px] overflow-x-auto overflow-y-auto">
+        <div className="w-full min-w-0 max-w-full max-h-[650px] overflow-x-auto overflow-y-auto">
           <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
               <tr>
