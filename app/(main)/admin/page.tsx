@@ -64,6 +64,15 @@ const adminTools = [
       "border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/30",
     iconColor: "bg-violet-500",
   },
+  {
+    href: "/admin/marquee",
+    title: "Marquee",
+    description:
+      "Create, edit, activate, and remove announcement messages shown on the site.",
+    color:
+      "border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/30",
+    iconColor: "bg-rose-500",
+  },
 ];
 
 function formatDate(value: string | null) {

@@ -9,6 +9,7 @@ import ThemeToggle from "@/components/shared/ThemeToggle";
 import UserMenu from "@/components/shared/UserMenu";
 import Image from "next/image";
 import CrowdChatWidget from "@/components/CrowdChatWidget";
+import Marquee from "@/components/Marquee";
 
 export const metadata: Metadata = {
   title: {
@@ -74,7 +75,7 @@ export default function MainLayout({
           </div>
         </div>
       </header>
-
+      <Marquee />
       {/* BODY */}
       <div className="relative flex min-h-0 min-w-0 flex-1">
         <main className="min-h-0 min-w-0 w-full flex-1 px-3 py-1 sm:px-4">

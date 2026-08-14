@@ -1,3 +1,37 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+
+
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+.marquee-track {
+  animation-name: marquee-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+    white-space: normal;
+    min-width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}

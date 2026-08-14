@@ -36,6 +36,10 @@ const adminNavigation = [
     href: "/admin/essays",
     label: "Essays",
   },
+  {
+    href: "/admin/marquee",
+    label: "Marquee",
+  },
 ];
 
 function isActiveRoute(pathname: string, href: string) {
