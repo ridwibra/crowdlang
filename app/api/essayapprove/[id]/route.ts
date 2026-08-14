@@ -1,3 +1,4 @@
+// app/api/essayapprove/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import db from "@/utils/db";
@@ -9,6 +10,7 @@ import { getSession } from "@/lib/server";
 const ALLOWED_STATUSES = [
   "draft",
   "pending",
+  "approved",
   "published",
   "rejected",
 ] as const;
@@ -96,7 +98,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           message:
-            "Status must be draft, pending, published, or rejected.",
+           "Status must be draft, pending, approved, published, or rejected.",
         },
         {
           status: 400,
@@ -145,11 +147,9 @@ export async function PATCH(
       },
     };
 
-    if (status === "published") {
-      update.$addToSet = {
-        approvedBy: mongoUser._id,
-      };
-    }
+   update.$addToSet = {
+  approvedBy: mongoUser._id,
+};
 
     const essay = await Essay.findByIdAndUpdate(id, update, {
       new: true,

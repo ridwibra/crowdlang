@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-type EssayStatus = "draft" | "pending" | "published" | "rejected";
+type EssayStatus = "draft" | "pending" | "published" | "approved" | "rejected";
 
 type StatusFilter = "all" | EssayStatus;
 
@@ -82,6 +82,7 @@ const REVIEW_STATUS_PRIORITY: Record<EssayStatus, number> = {
   pending: 0,
   draft: 1,
   rejected: 2,
+  approved: 4,
   published: 3,
 };
 
@@ -90,6 +91,7 @@ const STATUS_ORDER: Record<EssayStatus, number> = {
   pending: 1,
   published: 2,
   rejected: 3,
+  approved: 4,
 };
 
 function getStatusClass(status: EssayStatus) {
@@ -260,6 +262,7 @@ export default function AdminEssaysPage() {
       draft: essays.filter((essay) => essay.status === "draft").length,
       pending: essays.filter((essay) => essay.status === "pending").length,
       published: essays.filter((essay) => essay.status === "published").length,
+      approved: essays.filter((essay) => essay.status === "approved").length,
       rejected: essays.filter((essay) => essay.status === "rejected").length,
     }),
     [essays],
@@ -838,6 +841,7 @@ export default function AdminEssaysPage() {
                     <option value="draft">Draft</option>
                     <option value="pending">Pending</option>
                     <option value="published">Published</option>
+                    <option value="approved">Approved</option>
                     <option value="rejected">Rejected</option>
                   </select>
                 </div>

@@ -1,3 +1,4 @@
+// app/api/essayapprove/route.ts
 import { NextResponse } from "next/server";
 import db from "@/utils/db";
 import Essay from "@/models/Essay";

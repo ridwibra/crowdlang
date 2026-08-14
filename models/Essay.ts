@@ -5,13 +5,13 @@ const moderationHistorySchema = new Schema(
   {
     previousStatus: {
       type: String,
-      enum: ["draft", "pending", "published", "rejected"],
+     enum: ["draft", "pending", "approved", "published", "rejected"],
       required: true,
     },
 
     nextStatus: {
       type: String,
-      enum: ["draft", "pending", "published", "rejected"],
+     enum: ["draft", "pending", "approved", "published", "rejected"],
       required: true,
     },
 
