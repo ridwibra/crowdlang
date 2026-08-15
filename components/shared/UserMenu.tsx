@@ -1,17 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Loader2, LogOut, UserCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import {
+  Languages,
+  LayoutDashboard,
+  Loader2,
+  LogOut,
+  UserCircle,
+} from "lucide-react";
 
 export default function UserMenu() {
   // 1. Destructure data and isPending separately for clarity
   const { data, isPending } = authClient.useSession();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [hasWorkspaceAccess, setHasWorkspaceAccess] = useState(false);
+
+  useEffect(() => {
+    if (!data?.user) {
+      setHasWorkspaceAccess(false);
+      return;
+    }
+
+    let active = true;
+
+    const checkWorkspaceAccess = async () => {
+      try {
+        const response = await fetch("/api/workspace/access", {
+          cache: "no-store",
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (active) {
+          setHasWorkspaceAccess(
+            response.ok && result.hasWorkspaceAccess === true,
+          );
+        }
+      } catch {
+        if (active) {
+          setHasWorkspaceAccess(false);
+        }
+      }
+    };
+
+    void checkWorkspaceAccess();
+
+    return () => {
+      active = false;
+    };
+  }, [data?.user]);
 
   // 2. Handle the loading/pending state
   // This prevents the component from trying to render user data before it's fetched.
@@ -106,6 +148,16 @@ export default function UserMenu() {
             >
               <LayoutDashboard className="h-4 w-4" />
               Admin
+            </Link>
+          )}
+          {hasWorkspaceAccess && (
+            <Link
+              href="/workspace"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+              onClick={() => setOpen(false)}
+            >
+              <Languages className="h-4 w-4" />
+              Workspace
             </Link>
           )}
 
