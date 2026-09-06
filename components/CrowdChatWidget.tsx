@@ -11,8 +11,11 @@ type ChatMessage = {
 
 export default function ParrotChatWidget() {
   const [open, setOpen] = useState(false);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
   const [message, setMessage] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,6 +91,7 @@ export default function ParrotChatWidget() {
       behavior: "smooth",
     });
   }, [messages, loading]);
+
   const retryLastQuestion = () => {
     const lastUserMessage = [...messages]
       .reverse()
@@ -97,6 +101,7 @@ export default function ParrotChatWidget() {
       void sendMessage(lastUserMessage.text);
     }
   };
+
   return (
     <>
       {!open && (
@@ -291,7 +296,7 @@ export default function ParrotChatWidget() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              sendMessage();
+              void sendMessage();
             }}
             className="border-t border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
           >
