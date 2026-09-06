@@ -1,27 +1,63 @@
 // utils/embeddings.ts
-import { pipeline } from "@xenova/transformers";
+import "server-only";
 
-let embedder: any = null;
+type Embedder = (
+  text: string,
+  options: {
+    pooling: "mean";
+    normalize: true;
+  },
+) => Promise<{
+  data: Float32Array | number[];
+}>;
 
-export async function embedText(text: string): Promise<number[]> {
-  if (!embedder) {
-    embedder = await pipeline(
-      "feature-extraction",
-      "Xenova/all-MiniLM-L6-v2"
-    );
+let embedderPromise: Promise<Embedder> | null = null;
+
+async function getEmbedder(): Promise<Embedder> {
+  if (!embedderPromise) {
+    embedderPromise = (async () => {
+      const { pipeline } = await import("@xenova/transformers");
+
+      const extractor = await pipeline(
+        "feature-extraction",
+        "Xenova/all-MiniLM-L6-v2",
+        {
+          quantized: true,
+        },
+      );
+
+      return extractor as unknown as Embedder;
+    })();
   }
 
-  const output = await embedder(text, {
+  return embedderPromise;
+}
+
+export async function embedText(text: string): Promise<number[]> {
+  const cleanedText = text.replace(/\s+/g, " ").trim();
+
+  if (!cleanedText) {
+    throw new Error("Cannot create an embedding from empty text.");
+  }
+
+  const embedder = await getEmbedder();
+
+  const output = await embedder(cleanedText, {
     pooling: "mean",
     normalize: true,
   });
 
-  return Array.from(output.data) as number[];
+  return Array.from(output.data);
 }
 
 export function cosineSimilarity(a: number[], b: number[]) {
-  const dot = a.reduce((sum, v, i) => sum + v * b[i], 0);
-  const normA = Math.sqrt(a.reduce((s, v) => s + v * v, 0));
-  const normB = Math.sqrt(b.reduce((s, v) => s + v * v, 0));
+  if (a.length !== b.length || a.length === 0) {
+    return 0;
+  }
+
+  const dot = a.reduce((sum, value, index) => sum + value * b[index], 0);
+  const normA = Math.sqrt(a.reduce((sum, value) => sum + value * value, 0));
+  const normB = Math.sqrt(b.reduce((sum, value) => sum + value * value, 0));
+
   return dot / (normA * normB + 1e-8);
 }
