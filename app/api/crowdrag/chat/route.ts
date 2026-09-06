@@ -1,18 +1,30 @@
+// app/api/crowdrag/chat/route.ts
+import { NextResponse } from "next/server";
+import CrowdRAGItem from "@/models/CrowdRAGItem";
+import db from "@/utils/db";
+import { generateAnswer } from "@/utils/local-llm";
+import { normalizeQuery } from "@/utils/query-normalizer";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-
-import { NextResponse } from "next/server";
-import CrowdRAGItem from "@/models/CrowdRAGItem";
-import db from "@/utils/db";
-import { cosineSimilarity, embedText } from "@/utils/embeddings";
-import { generateAnswer } from "@/utils/local-llm";
-import { normalizeQuery } from "@/utils/query-normalizer";
-
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_CONTEXT_ITEMS = 6;
 const MAX_ITEM_TEXT_LENGTH = 900;
+const EMBEDDING_DIMENSION = 384;
+
+function cosineSimilarity(a: number[], b: number[]) {
+  if (a.length !== b.length || a.length === 0) {
+    return 0;
+  }
+
+  const dot = a.reduce((sum, value, index) => sum + value * b[index], 0);
+  const normA = Math.sqrt(a.reduce((sum, value) => sum + value * value, 0));
+  const normB = Math.sqrt(b.reduce((sum, value) => sum + value * value, 0));
+
+  return dot / (normA * normB + 1e-8);
+}
 
 function keywordScore(query: string, text: string) {
   const uniqueWords = [
@@ -75,9 +87,20 @@ export async function POST(request: Request) {
       );
     }
 
-    await db.connect();
+    const queryEmbedding = body?.embedding;
 
-    const queryEmbedding = await embedText(cleanedQuery);
+    if (
+      !Array.isArray(queryEmbedding) ||
+      queryEmbedding.length !== EMBEDDING_DIMENSION ||
+      !queryEmbedding.every((value: unknown) => typeof value === "number")
+    ) {
+      return NextResponse.json(
+        { message: "A valid query embedding is required." },
+        { status: 400 },
+      );
+    }
+
+    await db.connect();
 
     const items = await CrowdRAGItem.find({})
       .select("sourceType sourceId text language embedding")
@@ -152,5 +175,5 @@ export async function POST(request: Request) {
       },
       { status: 500 },
     );
-  } 
+  }
 }

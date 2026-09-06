@@ -1,5 +1,7 @@
 // utils/embeddings.ts
-import "server-only";
+"use client";
+
+import { pipeline } from "@xenova/transformers";
 
 type Embedder = (
   text: string,
@@ -15,19 +17,13 @@ let embedderPromise: Promise<Embedder> | null = null;
 
 async function getEmbedder(): Promise<Embedder> {
   if (!embedderPromise) {
-    embedderPromise = (async () => {
-      const { pipeline } = await import("@xenova/transformers");
-
-      const extractor = await pipeline(
-        "feature-extraction",
-        "Xenova/all-MiniLM-L6-v2",
-        {
-          quantized: true,
-        },
-      );
-
-      return extractor as unknown as Embedder;
-    })();
+    embedderPromise = pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2",
+      {
+        quantized: true,
+      },
+    ) as unknown as Promise<Embedder>;
   }
 
   return embedderPromise;

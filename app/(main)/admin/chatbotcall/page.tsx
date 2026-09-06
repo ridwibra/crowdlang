@@ -1,33 +1,89 @@
 "use client";
 
 import React, { useState } from "react";
+import { embedText } from "@/utils/embeddings";
+
+type SourceType =
+  | "alphabet"
+  | "essay"
+  | "language"
+  | "language-fallback"
+  | "reel"
+  | "table"
+  | "table-reverse";
+
+type RAGDocument = {
+  sourceType: SourceType;
+  sourceId: string;
+  text: string;
+  language: string;
+};
 
 export default function AdminPage() {
-  const [status, setStatus] = useState<null | string>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const runIngest = async () => {
     setLoading(true);
-    setStatus("Running ingest…");
+    setStatus("Loading CrowdLang content…");
 
     try {
-      const res = await fetch("/api/crowdrag/ingest", {
+      const response = await fetch("/api/crowdrag/ingest", {
         method: "POST",
+        cache: "no-store",
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setStatus(
-          `❌ Ingest failed: ${err.message || err.error || res.statusText}`,
-        );
-      } else {
-        setStatus("✅ RAG index rebuilt successfully!");
-      }
-    } catch (error: any) {
-      setStatus(`❌ Error: ${error.message}`);
-    }
+      const data = await response.json().catch(() => ({}));
 
-    setLoading(false);
+      if (!response.ok || !Array.isArray(data.documents)) {
+        throw new Error(data.message || "Could not load content for indexing.");
+      }
+
+      const documents = data.documents as RAGDocument[];
+      const items: Array<RAGDocument & { embedding: number[] }> = [];
+
+      for (let index = 0; index < documents.length; index += 1) {
+        const document = documents[index];
+
+        setStatus(
+          `Loading free browser AI model / embedding ${index + 1} of ${documents.length}…`,
+        );
+
+        const embedding = await embedText(document.text);
+
+        items.push({
+          ...document,
+          embedding,
+        });
+      }
+
+      setStatus("Saving the new RAG index…");
+
+      const saveResponse = await fetch("/api/crowdrag/save-index", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      const saveData = await saveResponse.json().catch(() => ({}));
+
+      if (!saveResponse.ok) {
+        throw new Error(saveData.message || "Could not save RAG index.");
+      }
+
+      setStatus(
+        `✅ RAG index rebuilt successfully! ${saveData.indexedCount} items indexed.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown indexing error.";
+
+      setStatus(`❌ Ingest failed: ${message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
