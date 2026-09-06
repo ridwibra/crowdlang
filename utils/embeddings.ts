@@ -1,59 +1,47 @@
 // utils/embeddings.ts
 "use client";
 
-import { pipeline } from "@xenova/transformers";
+import { pipeline, env } from "@huggingface/transformers";
 
-type Embedder = (
-  text: string,
-  options: {
-    pooling: "mean";
-    normalize: true;
-  },
-) => Promise<{
-  data: Float32Array | number[];
-}>;
+// Transformers.js should run in the browser.
+// Do not try to use local Node models.
+env.allowLocalModels = false;
+env.allowRemoteModels = true;
 
-let embedderPromise: Promise<Embedder> | null = null;
+let extractorPromise: Promise<any> | null = null;
 
-async function getEmbedder(): Promise<Embedder> {
-  if (!embedderPromise) {
-    embedderPromise = pipeline(
+async function getExtractor() {
+  if (!extractorPromise) {
+    extractorPromise = pipeline(
       "feature-extraction",
       "Xenova/all-MiniLM-L6-v2",
-      {
-        quantized: true,
-      },
-    ) as unknown as Promise<Embedder>;
+    );
   }
 
-  return embedderPromise;
+  return extractorPromise;
 }
 
 export async function embedText(text: string): Promise<number[]> {
-  const cleanedText = text.replace(/\s+/g, " ").trim();
+  const cleanedText = text.trim();
 
   if (!cleanedText) {
     throw new Error("Cannot create an embedding from empty text.");
   }
 
-  const embedder = await getEmbedder();
+  const extractor = await getExtractor();
 
-  const output = await embedder(cleanedText, {
+  const output = await extractor(cleanedText, {
     pooling: "mean",
     normalize: true,
   });
 
-  return Array.from(output.data);
-}
+  const embedding = Array.from(output.data as Float32Array);
 
-export function cosineSimilarity(a: number[], b: number[]) {
-  if (a.length !== b.length || a.length === 0) {
-    return 0;
+  if (embedding.length !== 384) {
+    throw new Error(
+      `Unexpected embedding dimension: ${embedding.length}. Expected 384.`,
+    );
   }
 
-  const dot = a.reduce((sum, value, index) => sum + value * b[index], 0);
-  const normA = Math.sqrt(a.reduce((sum, value) => sum + value * value, 0));
-  const normB = Math.sqrt(b.reduce((sum, value) => sum + value * value, 0));
-
-  return dot / (normA * normB + 1e-8);
+  return embedding;
 }
