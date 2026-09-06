@@ -1,8 +1,10 @@
-// next.config.ts
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@xenova/transformers"],
+  serverExternalPackages: [
+    "@xenova/transformers",
+    "onnxruntime-web",
+  ],
 
   images: {
     remotePatterns: [

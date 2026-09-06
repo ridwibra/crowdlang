@@ -16,13 +16,24 @@ let embedderPromise: Promise<Embedder> | null = null;
 async function getEmbedder(): Promise<Embedder> {
   if (!embedderPromise) {
     embedderPromise = (async () => {
-      const { pipeline } = await import("@xenova/transformers");
+      const { env, pipeline } = await import("@xenova/transformers");
+
+      // Prevent the native Node ONNX runtime from being used.
+      // Use the portable WebAssembly runtime instead.
+      env.backends.onnx.wasm.numThreads = 1;
+      env.backends.onnx.wasm.proxy = false;
+
+      // Server-side Vercel settings.
+      env.allowLocalModels = false;
+      env.useBrowserCache = false;
+      env.useFSCache = false;
 
       const extractor = await pipeline(
         "feature-extraction",
         "Xenova/all-MiniLM-L6-v2",
         {
           quantized: true,
+          device: "wasm",
         },
       );
 
