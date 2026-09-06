@@ -1,63 +1,46 @@
-import { env, pipeline } from "@huggingface/transformers";
+"use client";
 
-env.allowLocalModels = false;
-env.allowRemoteModels = true;
+import { pipeline } from "@xenova/transformers";
 
-type FeatureExtractor = (
-text: string,
-options: {
-pooling: "mean";
-normalize: boolean;
-},
+type BrowserEmbedder = (
+  text: string,
+  options: {
+    pooling: "mean";
+    normalize: true;
+  },
 ) => Promise<{
-data: Float32Array | Float64Array | ArrayLike<number>;
+  data: Float32Array | number[];
 }>;
 
-const EMBEDDING_MODEL = "Xenova/all-MiniLM-L6-v2";
-export const EMBEDDING_DIMENSION = 384;
+let embedderPromise: Promise<BrowserEmbedder> | null = null;
 
-let extractorPromise: Promise<FeatureExtractor> | null = null;
+async function getEmbedder(): Promise<BrowserEmbedder> {
+  if (!embedderPromise) {
+    embedderPromise = pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2",
+      {
+        quantized: true,
+      },
+    ) as unknown as Promise<BrowserEmbedder>;
+  }
 
-async function getExtractor(): Promise<FeatureExtractor> {
-if (!extractorPromise) {
-extractorPromise = pipeline(
-"feature-extraction",
-EMBEDDING_MODEL,
-) as Promise<FeatureExtractor>;
-}
-
-return extractorPromise;
+  return embedderPromise;
 }
 
 export async function embedText(text: string): Promise<number[]> {
-const cleanedText = text.trim();
+  const cleanedText = text.replace(/\s+/g, " ").trim();
 
-if (!cleanedText) {
-throw new Error("Cannot create an embedding from empty text.");
-}
+  if (!cleanedText) {
+    throw new Error("Cannot create an embedding from empty text.");
+  }
 
-const extractor = await getExtractor();
+  const embedder = await getEmbedder();
 
-const output = await extractor(cleanedText, {
-pooling: "mean",
-normalize: true,
-});
+  const output = await embedder(cleanedText, {
+    pooling: "mean",
+    normalize: true,
+  });
 
-const embedding = Array.from(output.data, Number);
-
-if (embedding.length !== EMBEDDING_DIMENSION) {
-throw new Error(
-`Unexpected embedding dimension: ${embedding.length}. Expected ${EMBEDDING_DIMENSION}.,`
-);
-}
-
-if (
-!embedding.every(
-(value) => typeof value === "number" && Number.isFinite(value),
-)
-) {
-throw new Error("Embedding contains invalid numeric values.");
-}
-
-return embedding;
+  return Array.from(output.data);
 }

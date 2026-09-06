@@ -1,39 +1,106 @@
 "use client";
 
 import React, { useState } from "react";
+import { embedText } from "@/utils/embeddings";
+
+type SourceType =
+  | "alphabet"
+  | "essay"
+  | "language"
+  | "language-fallback"
+  | "reel"
+  | "table"
+  | "table-reverse";
+
+type RAGDocument = {
+  sourceType: SourceType;
+  sourceId: string;
+  text: string;
+  language: string;
+};
+
+type RAGItem = RAGDocument & {
+  embedding: number[];
+};
 
 export default function AdminPage() {
   const [status, setStatus] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(false);
 
   const runIngest = async () => {
     setLoading(true);
-    setStatus("Rebuilding the CrowdLang RAG index…");
+    setStatus("Preparing CrowdLang content…");
 
     try {
-      const response = await fetch("/api/crowdrag/ingest", {
+      const prepareResponse = await fetch("/api/crowdrag/ingest", {
         method: "POST",
-        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "prepare",
+        }),
       });
 
-      const data = await response.json().catch(() => ({}));
+      const prepareData = await prepareResponse.json().catch(() => ({}));
 
-      if (!response.ok) {
-        throw new Error(data.message || "Could not rebuild the RAG index.");
+      if (!prepareResponse.ok || !Array.isArray(prepareData.documents)) {
+        throw new Error(
+          prepareData.message || "Could not prepare RAG documents.",
+        );
       }
 
-      const indexedCount =
-        typeof data.indexedCount === "number" ? data.indexedCount : 0;
+      const documents = prepareData.documents as RAGDocument[];
+
+      if (documents.length === 0) {
+        throw new Error("There is no CrowdLang content to index.");
+      }
+
+      const items: RAGItem[] = [];
+
+      for (let index = 0; index < documents.length; index += 1) {
+        const document = documents[index];
+
+        setStatus(
+          `Loading model / creating embedding ${index + 1} of ${
+            documents.length
+          }…`,
+        );
+
+        const embedding = await embedText(document.text);
+
+        items.push({
+          ...document,
+          embedding,
+        });
+      }
+
+      setStatus("Saving the new RAG index…");
+
+      const saveResponse = await fetch("/api/crowdrag/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "save",
+          items,
+        }),
+      });
+
+      const saveData = await saveResponse.json().catch(() => ({}));
+
+      if (!saveResponse.ok) {
+        throw new Error(saveData.message || "Could not save the RAG index.");
+      }
 
       setStatus(
-        `✅ RAG index rebuilt successfully! ${indexedCount} items indexed.`,
+        `✅ RAG index rebuilt successfully! ${
+          saveData.indexedCount ?? items.length
+        } items indexed.`,
       );
     } catch (error) {
-      console.error("RAG ingest error:", error);
-
-      const message =
-        error instanceof Error ? error.message : "Unknown indexing error.";
+      const message = error instanceof Error ? error.message : "Unknown error.";
 
       setStatus(`❌ Ingest failed: ${message}`);
     } finally {
@@ -42,20 +109,19 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">CrowdLang Admin</h1>
 
       <button
-        type="button"
         onClick={runIngest}
         disabled={loading}
-        className="rounded bg-green-600 px-4 py-2 text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
       >
         {loading ? "Rebuilding RAG Index…" : "Rebuild RAG Index"}
       </button>
 
       {status && (
-        <div className="rounded border bg-gray-50 p-3 text-sm">{status}</div>
+        <div className="p-3 border rounded bg-gray-50 text-sm">{status}</div>
       )}
     </div>
   );

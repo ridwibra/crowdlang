@@ -1,4 +1,3 @@
-// models/CrowdRAGItem.ts
 import mongoose, { Schema } from "mongoose";
 
 export type CrowdSourceType =
