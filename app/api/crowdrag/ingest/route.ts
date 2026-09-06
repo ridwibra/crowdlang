@@ -22,6 +22,7 @@ const allowedSourceTypes = new Set([
   "essay",
   "language",
   "language-fallback",
+  "marquee",
   "reel",
   "table",
   "table-reverse",
@@ -32,6 +33,7 @@ type SourceType =
   | "essay"
   | "language"
   | "language-fallback"
+  | "marquee"
   | "reel"
   | "table"
   | "table-reverse";
@@ -41,20 +43,38 @@ type RAGDocument = {
   sourceId: string;
   text: string;
   language: string;
+  title: string;
+  keywords: string[];
+  category: string;
+  level: string;
+  domain: string;
 };
 
 type RAGItem = RAGDocument & {
   embedding: number[];
 };
 
-function getCountries(value: unknown): string {
+function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
-    return "";
+    return [];
   }
 
-  return value
-    .filter((country): country is string => typeof country === "string")
-    .join(", ");
+  return [
+    ...new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function getCountries(value: unknown): string {
+  return getStringArray(value).join(", ");
 }
 
 function getAlphabetLetters(value: unknown): string {
@@ -65,7 +85,78 @@ function getAlphabetLetters(value: unknown): string {
   return value
     .map((letter: { character?: unknown }) => letter?.character)
     .filter((character): character is string => typeof character === "string")
+    .map((character) => character.trim())
+    .filter(Boolean)
     .join(", ");
+}
+
+function createKeywords(
+  ...values: Array<string | string[] | undefined>
+): string[] {
+  const rawKeywords = values.flatMap((value) => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      return value.split(/[\s,;|/]+/);
+    }
+
+    return [];
+  });
+
+  return [
+    ...new Set(
+      rawKeywords
+        .map((keyword) => keyword.trim().toLowerCase())
+        .filter((keyword) => keyword.length >= 2),
+    ),
+  ].slice(0, 40);
+}
+
+function chunkText(
+  value: string,
+  chunkSize = 850,
+  overlap = 150,
+): string[] {
+  const text = value.replace(/\s+/g, " ").trim();
+
+  if (!text) {
+    return [];
+  }
+
+  if (text.length <= chunkSize) {
+    return [text];
+  }
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = Math.min(start + chunkSize, text.length);
+
+    if (end < text.length) {
+      const sentenceEnd = text.lastIndexOf(". ", end);
+
+      if (sentenceEnd > start + Math.floor(chunkSize * 0.6)) {
+        end = sentenceEnd + 1;
+      }
+    }
+
+    const chunk = text.slice(start, end).trim();
+
+    if (chunk) {
+      chunks.push(chunk);
+    }
+
+    if (end >= text.length) {
+      break;
+    }
+
+    start = Math.max(end - overlap, start + 1);
+  }
+
+  return chunks;
 }
 
 async function requireAllowedSession() {
@@ -94,83 +185,270 @@ async function requireAllowedSession() {
 
 async function prepareDocuments(): Promise<RAGDocument[]> {
   const [alphabets, essays, languages, reels, tables] = await Promise.all([
-    Alphabet.find({}).lean(),
-    Essay.find({}).lean(),
-    Language.find({}).lean(),
-    Reel.find({}).lean(),
-    Table.find({}).lean(),
+    Alphabet.find({ status: "published" }).lean(),
+    Essay.find({ status: "published" }).lean(),
+    Language.find({ status: "active" }).lean(),
+
+    // The current Reel schema has no status field.
+    // Only index a reel when it has at least one approval record.
+    // Approval identity is never copied to RAG data.
+    Reel.find({ "approvedBy.0": { $exists: true } }).lean(),
+
+    Table.find({ status: "published" }).lean(),
   ]);
+
+  const languageNameById = new Map(
+    (languages as any[]).map((language) => [
+      language._id.toString(),
+      asString(language.name),
+    ]),
+  );
+
+  const resolveLanguageName = (value: unknown) => {
+    const id = value?.toString?.() ?? "";
+    return languageNameById.get(id) ?? "";
+  };
 
   const documents: RAGDocument[] = [];
 
+  for (const language of languages as any[]) {
+    const sourceId = language._id?.toString() ?? "";
+    const name = asString(language.name);
+    const countries = getCountries(language.countries);
+
+    if (!sourceId || !name) {
+      continue;
+    }
+
+    documents.push({
+      sourceType: "language",
+      sourceId,
+      title: name,
+      text: [
+        `Language: ${name}.`,
+        countries ? `Countries or regions: ${countries}.` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      language: name,
+      keywords: createKeywords(name, countries, "language", "countries"),
+      category: "language",
+      level: "",
+      domain: "general",
+    });
+  }
+
   for (const alphabet of alphabets as any[]) {
+    const sourceId = alphabet._id?.toString() ?? "";
+    const name = asString(alphabet.name);
+    const languageName = resolveLanguageName(alphabet.language);
+    const letters = getAlphabetLetters(alphabet.letters);
+
+    if (!sourceId || !name) {
+      continue;
+    }
+
     documents.push({
       sourceType: "alphabet",
-      sourceId: alphabet._id.toString(),
-      text: `Alphabet (${alphabet.name ?? "Untitled"}): ${getAlphabetLetters(
-        alphabet.letters,
-      )}`,
-      language: alphabet.language?.toString() ?? "",
+      sourceId,
+      title: name,
+      text: [
+        `Alphabet: ${name}.`,
+        languageName ? `Language: ${languageName}.` : "",
+        letters ? `Letters: ${letters}.` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      language: languageName,
+      keywords: createKeywords(
+        name,
+        languageName,
+        letters,
+        "alphabet",
+        "letters",
+        "writing",
+        "ipa",
+      ),
+      category: "alphabet",
+      level: "",
+      domain: "writing",
     });
   }
 
   for (const essay of essays as any[]) {
-    documents.push({
-      sourceType: "essay",
-      sourceId: essay._id.toString(),
-      text: `Essay: ${essay.title ?? "Untitled"}. ${essay.body ?? ""}`,
-      language: essay.language?.toString() ?? "",
-    });
-  }
+    const sourceId = essay._id?.toString() ?? "";
+    const title = asString(essay.title) || "Untitled essay";
+    const languageName = resolveLanguageName(essay.language);
+    const category = asString(essay.category);
+    const level = asString(essay.level);
+    const tags = getStringArray(essay.tags);
+    const body = asString(essay.body);
+    const translationTitle = asString(essay.translationTitle);
+    const translationBody = asString(essay.translationBody);
 
-  for (const language of languages as any[]) {
-    documents.push({
-      sourceType: "language",
-      sourceId: language._id.toString(),
-      text: `Language: ${language.name ?? "Unnamed language"}. Countries: ${getCountries(
-        language.countries,
-      )}`,
-      language: language.name ?? "",
-    });
-  }
+    if (!sourceId || !body) {
+      continue;
+    }
 
-  for (const reel of reels as any[]) {
-    documents.push({
-      sourceType: "reel",
-      sourceId: reel._id.toString(),
-      text: `Reel (${reel.language ?? ""}): ${reel.caption ?? ""}. Transcription: ${
-        reel.transcription ?? ""
-      }`,
-      language: reel.language?.toString() ?? "",
-    });
-  }
+    const fullText = [
+      `Essay title: ${title}.`,
+      languageName ? `Language: ${languageName}.` : "",
+      category ? `Category: ${category}.` : "",
+      level ? `Level: ${level}.` : "",
+      tags.length ? `Tags: ${tags.join(", ")}.` : "",
+      `Content: ${body}`,
+      translationTitle ? `Translation title: ${translationTitle}.` : "",
+      translationBody ? `Translation: ${translationBody}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
-  for (const table of tables as any[]) {
-    documents.push({
-      sourceType: "table",
-      sourceId: table._id.toString(),
-      text: `Table (${table.textType ?? "entry"}): ${table.text ?? ""} => ${
-        table.translation ?? ""
-      }`,
-      language: table.language?.toString() ?? "",
-    });
+    const chunks = chunkText(fullText);
 
-    if (table.text && table.translation) {
+    for (let index = 0; index < chunks.length; index += 1) {
       documents.push({
-        sourceType: "table-reverse",
-        sourceId: table._id.toString(),
-        text: `Reverse (${table.textType ?? "entry"}): ${table.translation} => ${
-          table.text
-        }`,
-        language: table.language?.toString() ?? "",
+        sourceType: "essay",
+        sourceId: `${sourceId}:chunk:${index + 1}`,
+        title,
+        text: chunks[index],
+        language: languageName,
+        keywords: createKeywords(
+          title,
+          languageName,
+          category,
+          level,
+          tags,
+          "essay",
+        ),
+        category,
+        level,
+        domain: "learning",
       });
     }
   }
 
-  for (const language of languages as any[]) {
-    const languageId = language._id.toString();
+  for (const table of tables as any[]) {
+    const sourceId = table._id?.toString() ?? "";
+    const text = asString(table.text);
+    const translation = asString(table.translation);
+    const textType = asString(table.textType) || "entry";
+    const domain = asString(table.domain);
+    const languageName = resolveLanguageName(table.language);
 
-    const hasContent =
+    if (!sourceId || !text || !translation) {
+      continue;
+    }
+
+    documents.push({
+      sourceType: "table",
+      sourceId,
+      title: text,
+      text: [
+        "Translation entry.",
+        languageName ? `Language: ${languageName}.` : "",
+        `Type: ${textType}.`,
+        domain ? `Domain: ${domain}.` : "",
+        `Original: ${text}.`,
+        `Translation: ${translation}.`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      language: languageName,
+      keywords: createKeywords(
+        text,
+        translation,
+        languageName,
+        textType,
+        domain,
+        "translation",
+      ),
+      category: "translation",
+      level: "",
+      domain,
+    });
+
+    documents.push({
+      sourceType: "table-reverse",
+      sourceId: `${sourceId}:reverse`,
+      title: translation,
+      text: [
+        "Reverse translation entry.",
+        languageName ? `Language: ${languageName}.` : "",
+        `Type: ${textType}.`,
+        domain ? `Domain: ${domain}.` : "",
+        `Original: ${translation}.`,
+        `Translation: ${text}.`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      language: languageName,
+      keywords: createKeywords(
+        translation,
+        text,
+        languageName,
+        textType,
+        domain,
+        "translation",
+      ),
+      category: "translation",
+      level: "",
+      domain,
+    });
+  }
+
+  for (const reel of reels as any[]) {
+    const sourceId = reel._id?.toString() ?? "";
+    const caption = asString(reel.caption);
+    const transcription = asString(reel.transcription);
+    const translation = asString(reel.translation);
+    const tags = getStringArray(reel.tags);
+    const languageName = resolveLanguageName(reel.language);
+    const mediaType = asString(reel.type) || "media";
+
+    if (!sourceId || (!caption && !transcription && !translation)) {
+      continue;
+    }
+
+    documents.push({
+      sourceType: "reel",
+      sourceId,
+      title: caption || "CrowdLang reel",
+      text: [
+        "CrowdLang reel.",
+        languageName ? `Language: ${languageName}.` : "",
+        `Media type: ${mediaType}.`,
+        caption ? `Caption: ${caption}.` : "",
+        tags.length ? `Tags: ${tags.join(", ")}.` : "",
+        transcription ? `Transcription: ${transcription}` : "",
+        translation ? `Translation: ${translation}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      language: languageName,
+      keywords: createKeywords(
+        caption,
+        languageName,
+        tags,
+        mediaType,
+        "reel",
+        "audio",
+        "video",
+      ),
+      category: "reel",
+      level: "",
+      domain: "media",
+    });
+  }
+
+  for (const language of languages as any[]) {
+    const languageId = language._id?.toString() ?? "";
+    const languageName = asString(language.name);
+
+    if (!languageId || !languageName) {
+      continue;
+    }
+
+    const hasSpecificContent =
       alphabets.some(
         (alphabet: any) =>
           alphabet.language?.toString() === languageId,
@@ -185,19 +463,33 @@ async function prepareDocuments(): Promise<RAGDocument[]> {
         (table: any) => table.language?.toString() === languageId,
       );
 
-    if (!hasContent) {
+    if (!hasSpecificContent) {
       documents.push({
         sourceType: "language-fallback",
-        sourceId: languageId,
-        text: `Basic information about ${
-          language.name ?? "this language"
-        }. Countries or territories: ${getCountries(language.countries)}.`,
-        language: language.name ?? "",
+        sourceId: `${languageId}:fallback`,
+        title: languageName,
+        text: [
+          `Basic information about ${languageName}.`,
+          `Countries or territories: ${getCountries(language.countries)}.`,
+        ].join("\n"),
+        language: languageName,
+        keywords: createKeywords(
+          languageName,
+          getCountries(language.countries),
+          "language",
+        ),
+        category: "language",
+        level: "",
+        domain: "general",
       });
     }
   }
 
-  return documents.filter((document) => document.text.trim().length > 0);
+  return documents.filter(
+    (document) =>
+      document.sourceId.trim().length > 0 &&
+      document.text.trim().length > 0,
+  );
 }
 
 function validateRAGItems(value: unknown): RAGItem[] {
@@ -211,29 +503,61 @@ function validateRAGItems(value: unknown): RAGItem[] {
     );
   }
 
-  return value.map((item: any) => {
-    if (
-      !allowedSourceTypes.has(item?.sourceType) ||
-      typeof item?.sourceId !== "string" ||
-      typeof item?.text !== "string" ||
-      typeof item?.language !== "string" ||
-      !Array.isArray(item?.embedding) ||
-      item.embedding.length !== EMBEDDING_DIMENSION ||
-      !item.embedding.every(
-        (number: unknown) =>
-          typeof number === "number" && Number.isFinite(number),
-      )
-    ) {
-      throw new Error("One or more RAG index items are invalid.");
+  return value.map((item: any, index: number) => {
+    const sourceType = item?.sourceType;
+    const sourceId = asString(item?.sourceId);
+    const text = asString(item?.text);
+    const language = asString(item?.language);
+    const title = asString(item?.title);
+    const keywords = getStringArray(item?.keywords);
+    const category = asString(item?.category);
+    const level = asString(item?.level);
+    const domain = asString(item?.domain);
+
+    const embedding = Array.isArray(item?.embedding)
+      ? item.embedding.map(Number)
+      : [];
+
+    if (!allowedSourceTypes.has(sourceType)) {
+      throw new Error(
+        `Invalid source type at item ${index + 1}: ${String(sourceType)}.`,
+      );
+    }
+
+    if (!sourceId) {
+      throw new Error(`Missing source ID at item ${index + 1}.`);
+    }
+
+    if (!text) {
+      throw new Error(`Missing text at item ${index + 1}.`);
+    }
+
+    if (embedding.length !== EMBEDDING_DIMENSION) {
+      throw new Error(
+        `Invalid embedding length at item ${index + 1}. Got ${
+          embedding.length
+        }; expected ${EMBEDDING_DIMENSION}.`,
+      );
+    }
+
+    if (!embedding.every(Number.isFinite)) {
+      throw new Error(
+        `Embedding contains invalid numeric values at item ${index + 1}.`,
+      );
     }
 
     return {
-      sourceType: item.sourceType,
-      sourceId: item.sourceId,
-      text: item.text.trim(),
-      language: item.language,
-      embedding: item.embedding,
-    } as RAGItem;
+      sourceType: sourceType as SourceType,
+      sourceId,
+      text,
+      language,
+      title,
+      keywords,
+      category,
+      level,
+      domain,
+      embedding,
+    };
   });
 }
 
@@ -248,6 +572,13 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
     const action = body?.action;
 
+    if (action !== "prepare" && action !== "save") {
+      return NextResponse.json(
+        { message: 'Invalid action. Use "prepare" or "save".' },
+        { status: 400 },
+      );
+    }
+
     await db.connect();
 
     if (action === "prepare") {
@@ -260,26 +591,19 @@ export async function POST(request: Request) {
       });
     }
 
-    if (action === "save") {
-      const items = validateRAGItems(body?.items);
+    const items = validateRAGItems(body?.items);
 
-      // Validate every item before deleting the old working index.
-      await CrowdRAGItem.deleteMany({});
+    // Validate every client-created embedding before removing the prior index.
+    await CrowdRAGItem.deleteMany({});
 
-      await CrowdRAGItem.insertMany(items, {
-        ordered: true,
-      });
+    await CrowdRAGItem.insertMany(items, {
+      ordered: true,
+    });
 
-      return NextResponse.json({
-        ok: true,
-        indexedCount: items.length,
-      });
-    }
-
-    return NextResponse.json(
-      { message: 'Invalid action. Use "prepare" or "save".' },
-      { status: 400 },
-    );
+    return NextResponse.json({
+      ok: true,
+      indexedCount: items.length,
+    });
   } catch (error) {
     console.error("RAG ingest failed:", error);
 

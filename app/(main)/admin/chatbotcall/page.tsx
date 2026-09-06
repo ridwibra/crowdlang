@@ -8,6 +8,7 @@ type SourceType =
   | "essay"
   | "language"
   | "language-fallback"
+  | "marquee"
   | "reel"
   | "table"
   | "table-reverse";
@@ -17,6 +18,11 @@ type RAGDocument = {
   sourceId: string;
   text: string;
   language: string;
+  title: string;
+  keywords: string[];
+  category: string;
+  level: string;
+  domain: string;
 };
 
 type RAGItem = RAGDocument & {
@@ -29,7 +35,7 @@ export default function AdminPage() {
 
   const runIngest = async () => {
     setLoading(true);
-    setStatus("Preparing CrowdLang content…");
+    setStatus("Preparing approved CrowdLang content…");
 
     try {
       const prepareResponse = await fetch("/api/crowdrag/ingest", {
@@ -53,7 +59,9 @@ export default function AdminPage() {
       const documents = prepareData.documents as RAGDocument[];
 
       if (documents.length === 0) {
-        throw new Error("There is no CrowdLang content to index.");
+        throw new Error(
+          "No approved public CrowdLang content is available to index.",
+        );
       }
 
       const items: RAGItem[] = [];
@@ -62,8 +70,8 @@ export default function AdminPage() {
         const document = documents[index];
 
         setStatus(
-          `Loading model / creating embedding ${index + 1} of ${
-            documents.length
+          `Creating embedding ${index + 1} of ${documents.length}: ${
+            document.title || document.sourceType
           }…`,
         );
 
@@ -97,7 +105,7 @@ export default function AdminPage() {
       setStatus(
         `✅ RAG index rebuilt successfully! ${
           saveData.indexedCount ?? items.length
-        } items indexed.`,
+        } public content items indexed.`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error.";
@@ -111,6 +119,11 @@ export default function AdminPage() {
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">CrowdLang Admin</h1>
+
+      <p className="max-w-2xl text-sm text-slate-600">
+        This rebuild includes only approved, published, or active public
+        content. Keep this page open until the rebuild completes.
+      </p>
 
       <button
         onClick={runIngest}
