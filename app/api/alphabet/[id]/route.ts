@@ -1,3 +1,4 @@
+//   /api/alphabet/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/utils/db";
 import Alphabet from "@/models/Alphabet";
@@ -82,21 +83,17 @@ export async function PUT(
     const user = session.user as typeof session.user & UserType;
     const body = await request.json();
 
-    if (
-      !body.name ||
-      typeof body.name !== "string" ||
-      !body.name.trim() ||
-      !body.language ||
-      !Array.isArray(body.letters)
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "Name, language, and letters are required.",
-        },
-        { status: 400 },
-      );
-    }
+   if (
+  !body.language ||
+  !Array.isArray(body.letters)
+) {
+  return NextResponse.json(
+    {
+      message: "Language and letters are required.",
+    },
+    { status: 400 },
+  );
+}
 
     const mongoUser = await User.findOne({
       email: user.email,
@@ -152,7 +149,8 @@ export async function PUT(
       );
     }
 
-    alphabet.name = body.name.trim();
+alphabet.name =
+  typeof body.name === "string" ? body.name.trim() : "";
     alphabet.language = languageDoc._id;
     alphabet.letters = rebuiltLetters;
     alphabet.lastUpdatedBy = mongoUser._id;

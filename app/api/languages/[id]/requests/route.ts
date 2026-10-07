@@ -1,3 +1,4 @@
+// app/api/languages/[id]/requests/route.ts
 import "@/models/User";
 
 import { NextResponse } from "next/server";
@@ -129,7 +130,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "This language is currently archived and cannot accept role requests.",
+           "This language is not active and cannot accept role requests.",
         },
         { status: 400 },
       );

@@ -63,7 +63,7 @@ export default function LanguageForm() {
     setMessage("");
 
     try {
-      const res = await fetch("/api/language", {
+      const res = await fetch("/api/languages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, countries }),

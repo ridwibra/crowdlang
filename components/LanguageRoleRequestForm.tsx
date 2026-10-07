@@ -34,7 +34,7 @@ export default function LanguageRoleRequestForm({ languageRoles }: Props) {
 
     const loadLanguages = async () => {
       try {
-        const response = await fetch("/api/language", {
+        const response = await fetch("/api/languages", {
           cache: "no-store",
         });
 

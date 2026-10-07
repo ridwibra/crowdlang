@@ -1,3 +1,6 @@
+import ActivityChart, {
+  type ActivityChartPoint,
+} from "@/components/ActivityChart";
 import { auth } from "@/lib/auth";
 import Tracker from "@/models/Tracker";
 import User from "@/models/User";
@@ -8,8 +11,11 @@ import { redirect } from "next/navigation";
 
 type GlobalRole = "user" | "staff" | "admin";
 
+type ActivityRange = "day" | "week" | "month" | "year" | "all";
+
 type SearchParams = {
   q?: string;
+  range?: ActivityRange;
 };
 
 type PopulatedUser = {
@@ -32,6 +38,40 @@ type ActivityRecord = {
   updatedAt?: Date | string | null;
 };
 
+const RANGE_OPTIONS: Array<{
+  value: ActivityRange;
+  label: string;
+}> = [
+  {
+    value: "day",
+    label: "1 day",
+  },
+  {
+    value: "week",
+    label: "1 week",
+  },
+  {
+    value: "month",
+    label: "1 month",
+  },
+  {
+    value: "year",
+    label: "1 year",
+  },
+  {
+    value: "all",
+    label: "All",
+  },
+];
+
+const RANGE_LABELS: Record<ActivityRange, string> = {
+  day: "1 day",
+  week: "1 week",
+  month: "1 month",
+  year: "1 year",
+  all: "all time",
+};
+
 const formatTimestamp = (date: Date | string | null | undefined) => {
   if (!date) return "—";
 
@@ -49,6 +89,78 @@ const formatTimestamp = (date: Date | string | null | undefined) => {
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getRangeStart(range: ActivityRange) {
+  if (range === "all") return null;
+
+  const now = new Date();
+
+  if (range === "day") {
+    return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  }
+
+  if (range === "week") {
+    return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  }
+
+  if (range === "month") {
+    const start = new Date(now);
+    start.setMonth(start.getMonth() - 1);
+    return start;
+  }
+
+  const start = new Date(now);
+  start.setFullYear(start.getFullYear() - 1);
+  return start;
+}
+
+function getBucketUnit(range: ActivityRange) {
+  if (range === "day") return "hour" as const;
+
+  if (range === "week" || range === "month") {
+    return "day" as const;
+  }
+
+  return "month" as const;
+}
+
+function formatChartLabel(date: Date, range: ActivityRange) {
+  if (range === "day") {
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+    }).format(date);
+  }
+
+  if (range === "week") {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  if (range === "month") {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    year: "2-digit",
+  }).format(date);
+}
+
+function getRangeHref(range: ActivityRange, searchQuery: string) {
+  if (!searchQuery) {
+    return `/admin/activitytracker?range=${range}`;
+  }
+
+  return `/admin/activitytracker?range=${range}&q=${encodeURIComponent(
+    searchQuery,
+  )}`;
 }
 
 export default async function AdminActivityPage({
@@ -71,8 +183,59 @@ export default async function AdminActivityPage({
   const searchQuery =
     typeof params.q === "string" ? params.q.trim().slice(0, 100) : "";
 
+  const requestedRange = params.range;
+
+  const range: ActivityRange =
+    requestedRange === "day" ||
+    requestedRange === "week" ||
+    requestedRange === "month" ||
+    requestedRange === "year" ||
+    requestedRange === "all"
+      ? requestedRange
+      : "week";
+
   try {
     await db.connect();
+
+    const rangeStart = getRangeStart(range);
+
+    const activityDateMatch = rangeStart
+      ? {
+          createdAt: {
+            $gte: rangeStart,
+          },
+        }
+      : {};
+
+    const chartAggregation = await Tracker.aggregate([
+      {
+        $match: activityDateMatch,
+      },
+      {
+        $group: {
+          _id: {
+            $dateTrunc: {
+              date: "$createdAt",
+              unit: getBucketUnit(range),
+              timezone: "UTC",
+            },
+          },
+          total: {
+            $sum: 1,
+          },
+        },
+      },
+      {
+        $sort: {
+          _id: 1,
+        },
+      },
+    ]);
+
+    const chartData: ActivityChartPoint[] = chartAggregation.map((item) => ({
+      label: formatChartLabel(new Date(item._id), range),
+      total: Number(item.total) || 0,
+    }));
 
     let activities: ActivityRecord[] = [];
 
@@ -131,15 +294,40 @@ export default async function AdminActivityPage({
           </h1>
 
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Search activity records by a user&apos;s name or email address.
+            Review activity trends, then search individual records by a
+            user&apos;s name or email address.
           </p>
         </div>
+
+        <div className="mb-6 flex flex-wrap gap-2">
+          {RANGE_OPTIONS.map((option) => {
+            const isActive = option.value === range;
+
+            return (
+              <Link
+                key={option.value}
+                href={getRangeHref(option.value, searchQuery)}
+                className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                  isActive
+                    ? "bg-teal-600 text-white shadow-sm"
+                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                {option.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        <ActivityChart data={chartData} rangeLabel={RANGE_LABELS[range]} />
 
         <form
           action="/admin/activitytracker"
           method="GET"
           className="mb-6 flex flex-col gap-3 sm:flex-row"
         >
+          <input type="hidden" name="range" value={range} />
+
           <label htmlFor="q" className="sr-only">
             Search by user name or email
           </label>
@@ -162,7 +350,7 @@ export default async function AdminActivityPage({
 
           {searchQuery && (
             <Link
-              href="/admin/activitytracker"
+              href={`/admin/activitytracker?range=${range}`}
               className="rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Clear

@@ -76,12 +76,42 @@ export interface VerificationType {
   updatedAt: Date;
 }
 
+
 export interface LanguageType {
   name: string;
+
   countries: string[];
-  status: "active" | "archived";
+
+  status: "active" | "archived" | "pending_deletion";
+
   createdBy: Types.ObjectId;
+
+  editRequest?: {
+    requestedBy?: Types.ObjectId;
+
+    requestedAt?: Date;
+
+    proposedChanges?: {
+      name?: string;
+      countries?: string[];
+      status?: "active" | "archived";
+    };
+
+    requestNote?: string;
+  };
+
+  deletionRequest?: {
+    requestedBy?: Types.ObjectId;
+
+    requestedAt?: Date;
+
+    previousStatus?: "active" | "archived";
+
+    requestNote?: string;
+  };
+
   createdAt: Date;
+
   updatedAt: Date;
 }
 
@@ -135,8 +165,7 @@ export interface EssayType {
 export interface TableType {
   text: string;
   translation: string;
-  textType: "word" | "sentence" | "expression" | "passage";
-  status: "pending" | "published" | "rejected";
+textType: "word" | "sentence" | "expression" | "paragraph";  status: "pending" | "published" | "rejected";
   domain?: string;
   createdBy: Types.ObjectId;
   editedBy?: Types.ObjectId[];
@@ -218,4 +247,82 @@ export interface ReelCardType {
   createdAt: string;
   hasLiked: boolean;
   type: "audio" | "video";
+}
+
+
+
+
+export type WritingDirectionType =
+  | "left-to-right"
+  | "right-to-left"
+  | "top-to-bottom"
+  | "bottom-to-top"
+  | "boustrophedon"
+  | "mixed";
+
+export type ConstituentType =
+  | "subject"
+  | "verb"
+  | "object"
+  | "indirect-object"
+  | "complement"
+  | "adverbial"
+  | "auxiliary"
+  | "topic"
+  | "focus"
+  | "noun-phrase"
+  | "adjective"
+  | "adposition"
+  | "particle"
+  | "classifier"
+  | "other";
+
+export interface WordOrderPatternType {
+  _id?: Types.ObjectId;
+  label?: string;
+  constituents: ConstituentType[];
+  notes?: string;
+}
+
+export interface LanguageStructureType {
+  _id?: Types.ObjectId;
+
+  language: Types.ObjectId;
+
+  writingDirections: WritingDirectionType[];
+
+  wordOrders: WordOrderPatternType[];
+
+  createdBy: Types.ObjectId;
+
+  lastUpdatedBy?: Types.ObjectId;
+
+  status?: "draft" | "published" | "archived";
+ editRequest?: {
+    requestedBy?: Types.ObjectId;
+    requestedAt?: Date;
+
+    proposedChanges?: {
+      language?: Types.ObjectId;
+      writingDirections?: string[];
+      wordOrders?: Array<{
+        _id?: Types.ObjectId;
+        label: string;
+        constituents: string[];
+        notes: string;
+      }>;
+      status?: "draft" | "published" | "archived";
+    };
+
+    requestNote?: string;
+  };
+
+  deletionRequest?: {
+    requestedBy?: Types.ObjectId;
+    requestedAt?: Date;
+    previousStatus?: "draft" | "published" | "archived";
+    requestNote?: string;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
 }

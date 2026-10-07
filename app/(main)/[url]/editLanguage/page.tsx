@@ -13,6 +13,7 @@ interface Language {
   _id: string;
   name: string;
   countries: string[];
+  status?: "active" | "archived" | "pending_deletion";
 }
 
 interface LanguageApiResponse {
@@ -41,26 +42,40 @@ export default function EditLanguagePage({ params }: PageProps) {
   useEffect(() => {
     const loadLanguage = async () => {
       try {
-        const response = await fetch("/api/language", {
+        const response = await fetch("/api/languages", {
           cache: "no-store",
         });
 
-        const data: LanguageApiResponse = await response.json();
+        const data = (await response.json()) as LanguageApiResponse & {
+          message?: string;
+          error?: string;
+        };
 
         if (!response.ok) {
           setMessageType("error");
-          setMessage(data as unknown as string);
+          setMessage(
+            data.message ||
+              data.error ||
+              "Failed to load the language details.",
+          );
           return;
         }
 
         const language = data.languages.find(
-          (item: Language) =>
-            item.name.toLowerCase() === languageName.toLowerCase(),
+          (item) => item.name.toLowerCase() === languageName.toLowerCase(),
         );
 
         if (!language) {
           setMessageType("error");
           setMessage("Language not found.");
+          return;
+        }
+
+        if (language.status === "pending_deletion") {
+          setMessageType("error");
+          setMessage(
+            "This language is pending deletion and cannot receive edit requests.",
+          );
           return;
         }
 
@@ -80,7 +95,9 @@ export default function EditLanguagePage({ params }: PageProps) {
 
   const updateCountry = (index: number, value: string) => {
     setCountries((previousCountries) =>
-      previousCountries.map((country, i) => (i === index ? value : country)),
+      previousCountries.map((country, currentIndex) =>
+        currentIndex === index ? value : country,
+      ),
     );
 
     setCountriesError("");
@@ -88,13 +105,12 @@ export default function EditLanguagePage({ params }: PageProps) {
 
   const addCountry = () => {
     setCountries((previousCountries) => [...previousCountries, ""]);
-
     setCountriesError("");
   };
 
   const removeCountry = (index: number) => {
     setCountries((previousCountries) =>
-      previousCountries.filter((_, i) => i !== index),
+      previousCountries.filter((_, currentIndex) => currentIndex !== index),
     );
 
     setCountriesError("");
@@ -133,14 +149,15 @@ export default function EditLanguagePage({ params }: PageProps) {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!validateForm()) return;
-    if (!languageId) return;
+    if (!validateForm() || !languageId) {
+      return;
+    }
 
     setSaving(true);
     setMessage("");
 
     try {
-      const response = await fetch(`/api/language/${languageId}`, {
+      const response = await fetch(`/api/languages/${languageId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -160,19 +177,21 @@ export default function EditLanguagePage({ params }: PageProps) {
           setCountriesError(data.message);
         } else {
           setMessageType("error");
-          setMessage(data.message || "Failed to update language.");
+          setMessage(data.message || "Failed to submit edit request.");
         }
 
         return;
       }
 
       setMessageType("success");
-      setMessage("Language updated successfully.");
+      setMessage(
+        "Language edit request submitted. The language will not change until the request is approved.",
+      );
 
       setTimeout(() => {
         router.refresh();
-        router.push(`/${encodeURIComponent(name.trim())}`);
-      }, 800);
+        router.push(`/${encodeURIComponent(languageName)}`);
+      }, 1200);
     } catch {
       setMessageType("error");
       setMessage("Something went wrong. Please try again.");
@@ -217,7 +236,6 @@ export default function EditLanguagePage({ params }: PageProps) {
           </button>
 
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900">
-            {/* Header */}
             <div className="border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-violet-50 to-fuchsia-50 px-6 py-7 dark:border-indigo-500/15 dark:from-indigo-500/10 dark:via-violet-500/10 dark:to-fuchsia-500/10 sm:px-8">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-xl font-bold text-white shadow-sm">
@@ -232,12 +250,14 @@ export default function EditLanguagePage({ params }: PageProps) {
                   </p>
 
                   <h1 className="mt-1 break-words text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
-                    Edit {languageName}
+                    Suggest changes to {languageName}
                   </h1>
 
                   <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Update the language name and the countries or territories
-                    where it is widely spoken.
+                    Submit suggested updates to the language name and the
+                    countries or territories where it is widely spoken. A
+                    language creator, editor, or expert must approve the request
+                    before changes become visible.
                   </p>
                 </div>
               </div>
@@ -267,7 +287,6 @@ export default function EditLanguagePage({ params }: PageProps) {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Language name */}
                 <section>
                   <div className="mb-4">
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
@@ -315,7 +334,6 @@ export default function EditLanguagePage({ params }: PageProps) {
                   </div>
                 </section>
 
-                {/* Countries */}
                 <section className="border-t border-slate-200 pt-8 dark:border-slate-800">
                   <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
@@ -345,7 +363,7 @@ export default function EditLanguagePage({ params }: PageProps) {
                         : "border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-800/30"
                     }`}
                   >
-                    {countries.map((country: string, index: number) => (
+                    {countries.map((country, index) => (
                       <div
                         key={index}
                         className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center dark:border-slate-700 dark:bg-slate-900"
@@ -369,7 +387,7 @@ export default function EditLanguagePage({ params }: PageProps) {
                             Select a country or territory...
                           </option>
 
-                          {COUNTRIES.map((countryName: string) => {
+                          {COUNTRIES.map((countryName) => {
                             const alreadySelected =
                               countries.includes(countryName) &&
                               country !== countryName;
@@ -423,7 +441,6 @@ export default function EditLanguagePage({ params }: PageProps) {
                   </div>
                 </section>
 
-                {/* Actions */}
                 <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end dark:border-slate-800">
                   <button
                     type="button"
@@ -442,10 +459,10 @@ export default function EditLanguagePage({ params }: PageProps) {
                     {saving ? (
                       <>
                         <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                        Saving changes...
+                        Submitting request...
                       </>
                     ) : (
-                      "Save changes"
+                      "Submit edit request"
                     )}
                   </button>
                 </div>

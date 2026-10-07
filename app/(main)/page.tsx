@@ -10,6 +10,7 @@ interface LanguageType {
   _id: string;
   name: string;
   countries: string[];
+  status?: "active" | "archived" | "pending_deletion";
 }
 
 interface TranslationCell {
@@ -20,7 +21,7 @@ interface TranslationCell {
 interface TableRow {
   english: string;
   translations: Record<string, TranslationCell>;
-  textType: "word" | "sentence" | "expression" | "passage";
+  textType: "word" | "sentence" | "expression" | "paragraph";
 }
 
 interface LanguageApiResponse {
@@ -31,16 +32,23 @@ interface TableApiRow {
   _id: string;
   english: string;
   translations: Record<string, TranslationCell>;
-  textType: "word" | "sentence" | "expression" | "passage";
+  textType: "word" | "sentence" | "expression" | "paragraph";
 }
 
 interface TableApiResponse {
   rows: TableApiRow[];
 }
 
-const ALL_TYPES = ["word", "sentence", "expression", "passage"] as const;
+const ALL_TYPES = ["word", "sentence", "expression", "paragraph"] as const;
 
 type RowActionMode = "edit" | "delete";
+
+type CellPreview = {
+  english: string;
+  translation: string;
+  languageName: string;
+};
+
 interface ActionMenuPosition {
   top: number;
   left: number;
@@ -60,9 +68,9 @@ export default function Home() {
   const [showTypeTools, setShowTypeTools] = useState(false);
 
   const [actionsOpenFor, setActionsOpenFor] = useState<string | null>(null);
-
   const [actionMenuPosition, setActionMenuPosition] =
     useState<ActionMenuPosition | null>(null);
+
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionsRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
 
@@ -70,6 +78,8 @@ export default function Home() {
   const [modalMode, setModalMode] = useState<RowActionMode | null>(null);
   const [selectedRow, setSelectedRow] = useState<TableRow | null>(null);
   const [selectedCellRowId, setSelectedCellRowId] = useState("");
+
+  const [cellPreview, setCellPreview] = useState<CellPreview | null>(null);
 
   const [selectedLanguageQuery, setSelectedLanguageQuery] = useState("");
   const [selectedLanguageId, setSelectedLanguageId] = useState("");
@@ -120,7 +130,7 @@ export default function Home() {
       setLoadError("");
 
       const [languageResponse, tableResponse] = await Promise.all([
-        fetch("/api/language", { cache: "no-store" }),
+        fetch("/api/languages", { cache: "no-store" }),
         fetch("/api/table", { cache: "no-store" }),
       ]);
 
@@ -129,10 +139,10 @@ export default function Home() {
       }
 
       const languageData: LanguageApiResponse = await languageResponse.json();
-
       const tableData: TableApiResponse = await tableResponse.json();
 
       const sortedLanguages = (languageData.languages || [])
+        .filter((language) => language.status !== "pending_deletion")
         .slice()
         .sort((first, second) => first.name.localeCompare(second.name));
 
@@ -244,6 +254,18 @@ export default function Home() {
     );
   }, [rowSelectableLanguages, selectedLanguageQuery]);
 
+  const tableMinWidth = useMemo(() => {
+    const actionColumnWidth = 112;
+    const englishColumnWidth = 320;
+    const languageColumnWidth = 256;
+
+    return (
+      actionColumnWidth +
+      englishColumnWidth +
+      visibleLanguages.length * languageColumnWidth
+    );
+  }, [visibleLanguages.length]);
+
   const toggleLang = (languageId: string) => {
     setSelectedLangIds((previous) =>
       previous.includes(languageId)
@@ -333,6 +355,7 @@ export default function Home() {
     const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(workbook, worksheet, "Language Table");
+
     XLSX.writeFile(workbook, "crowdlang-language-table.xlsx");
   };
 
@@ -387,6 +410,10 @@ export default function Home() {
       return;
     }
 
+    if (modalMode === "edit" && !selectedLanguageId) {
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -402,10 +429,6 @@ export default function Home() {
         await loadData();
         closeModal();
 
-        return;
-      }
-
-      if (!selectedLanguageId) {
         return;
       }
 
@@ -449,6 +472,7 @@ export default function Home() {
           languageText.trim(),
         )
       : Boolean(selectedRow && selectedCellRowId);
+
   const activeActionRow = useMemo(() => {
     if (!actionsOpenFor) {
       return null;
@@ -460,6 +484,22 @@ export default function Home() {
       ) || null
     );
   }, [actionsOpenFor, filteredRows]);
+
+  const openCellPreview = (
+    english: string,
+    translation: string,
+    languageName: string,
+  ) => {
+    setCellPreview({
+      english,
+      translation,
+      languageName,
+    });
+  };
+
+  const closeCellPreview = () => {
+    setCellPreview(null);
+  };
 
   const toggleActionsMenu = (rowKey: string) => {
     if (actionsOpenFor === rowKey) {
@@ -491,6 +531,7 @@ export default function Home() {
 
     setActionsOpenFor(rowKey);
   };
+
   if (loading) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center px-4">
@@ -531,13 +572,23 @@ export default function Home() {
           </p>
         </div>
 
-        <Link
-          href="/addLanguage"
-          className="inline-flex min-h-11 w-fit shrink-0 items-center justify-center self-start rounded-xl bg-gradient-to-r from-teal-500 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-teal-600 hover:to-cyan-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
-        >
-          <span className="mr-2 text-lg leading-none">+</span>
-          Add language
-        </Link>
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link
+            href="/addtable"
+            className="order-2 inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950 sm:order-1"
+          >
+            <span className="mr-2 text-lg leading-none">+</span>
+            Add table entry
+          </Link>
+
+          <Link
+            href="/addLanguage"
+            className="order-1 inline-flex min-h-11 items-center justify-center rounded-xl border border-teal-200 bg-teal-50 px-5 py-2.5 text-sm font-bold text-teal-700 shadow-sm transition hover:bg-teal-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300 dark:hover:bg-teal-500/20 dark:focus:ring-offset-slate-950 sm:order-2"
+          >
+            <span className="mr-2 text-lg leading-none">+</span>
+            Add language
+          </Link>
+        </div>
       </section>
 
       {loadError && (
@@ -555,7 +606,6 @@ export default function Home() {
           <span>{loadError}</span>
         </div>
       )}
-
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-xl">
@@ -596,7 +646,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -779,7 +828,6 @@ export default function Home() {
           </div>
         )}
       </section>
-
       <section className="w-full min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex min-w-0 flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:border-slate-800">
           <div className="min-w-0">
@@ -799,31 +847,38 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Horizontal/vertical scrolling belongs HERE */}
-        <div className="w-full min-w-0 max-w-full max-h-[650px] overflow-x-auto overflow-y-auto">
-          <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
+        <div className="w-full max-w-full overflow-x-auto overflow-y-auto">
+          <table
+            className="border-separate border-spacing-0 text-sm"
+            style={{ minWidth: `${tableMinWidth}px` }}
+          >
             <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
               <tr>
-                <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                <th className="w-28 min-w-28 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
                   Actions
                 </th>
 
-                <th className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                <th className="w-80 min-w-64 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
                   English
                 </th>
 
                 {visibleLanguages.map((language) => (
                   <th
                     key={language._id}
-                    className="whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                    className="w-64 min-w-56 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300"
                   >
                     <Link
                       href={`/${encodeURIComponent(language.name)}`}
                       title={`View ${language.name} language details`}
-                      className="group inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-bold normal-case tracking-normal text-teal-700 transition hover:-translate-y-0.5 hover:border-teal-500 hover:bg-teal-600 hover:text-white hover:shadow-sm dark:border-teal-500/30 dark:bg-teal-950/40 dark:text-teal-300"
+                      className="flex w-full items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-1.5 text-xs font-bold normal-case tracking-normal text-teal-700 transition hover:-translate-y-0.5 hover:border-teal-500 hover:bg-teal-600 hover:text-white hover:shadow-sm dark:border-teal-500/30 dark:bg-teal-950/40 dark:text-teal-300"
                     >
-                      <span>{language.name}</span>
-                      <span aria-hidden="true">↗</span>
+                      <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+                        {language.name}
+                      </span>
+
+                      <span aria-hidden="true" className="shrink-0">
+                        ↗
+                      </span>
                     </Link>
                   </th>
                 ))}
@@ -854,36 +909,69 @@ export default function Home() {
                         ref={(element) => {
                           actionsRefs.current[rowKey] = element;
                         }}
-                        className="relative whitespace-nowrap border-b border-r border-slate-200 px-4 py-3 align-top dark:border-slate-800"
+                        className="w-28 min-w-28 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800"
                       >
                         <button
                           type="button"
                           aria-haspopup="menu"
                           aria-expanded={actionsOpenFor === rowKey}
                           onClick={() => toggleActionsMenu(rowKey)}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-slate-700 px-2 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
                         >
                           Actions
                           <span aria-hidden="true">▾</span>
                         </button>
                       </td>
 
-                      <td className="border-b border-r border-slate-200 px-4 py-3 align-top font-medium text-slate-900 dark:border-slate-800 dark:text-white">
-                        {row.english}
+                      <td className="w-80 min-w-64 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openCellPreview(row.english, "", "English")
+                          }
+                          title="View full English text"
+                          className="block w-full text-left font-medium text-slate-900 transition hover:text-teal-700 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:text-white dark:hover:text-teal-300 dark:focus:ring-offset-slate-900"
+                        >
+                          <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
+                            {row.english}
+                          </span>
+                        </button>
                       </td>
 
-                      {visibleLanguages.map((language) => (
-                        <td
-                          key={language._id}
-                          className="border-b border-r border-slate-200 px-4 py-3 align-top text-slate-700 dark:border-slate-800 dark:text-slate-200"
-                        >
-                          {row.translations?.[language._id]?.value || (
-                            <span className="text-slate-400 dark:text-slate-600">
-                              —
-                            </span>
-                          )}
-                        </td>
-                      ))}
+                      {visibleLanguages.map((language) => {
+                        const translation =
+                          row.translations?.[language._id]?.value || "";
+
+                        return (
+                          <td
+                            key={language._id}
+                            className="w-64 min-w-56 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800"
+                          >
+                            {translation ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openCellPreview(
+                                    row.english,
+                                    translation,
+                                    language.name,
+                                  )
+                                }
+                                title={`View full ${language.name} translation`}
+                                className="block w-full text-left text-slate-700 transition hover:text-teal-700 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:text-slate-200 dark:hover:text-teal-300 dark:focus:ring-offset-slate-900"
+                              >
+                                <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
+                                  {translation}
+                                </span>
+                              </button>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-600">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })
@@ -936,6 +1024,93 @@ export default function Home() {
           </div>,
           document.body,
         )}
+      {cellPreview && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cell-preview-title"
+          onMouseDown={closeCellPreview}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+        >
+          <div
+            onMouseDown={(event) => event.stopPropagation()}
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-600 dark:text-teal-400">
+                  Full translation
+                </p>
+
+                <h3
+                  id="cell-preview-title"
+                  className="mt-2 break-words text-2xl font-black tracking-tight text-slate-950 dark:text-white"
+                >
+                  {cellPreview.languageName}
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  Full source text and translation for this table cell.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCellPreview}
+                aria-label="Close full translation dialog"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-5">
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                  English text
+                </p>
+
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800 dark:text-slate-100">
+                  {cellPreview.english}
+                </p>
+              </section>
+
+              {cellPreview.translation ? (
+                <section className="rounded-2xl border border-teal-200 bg-teal-50 p-4 dark:border-teal-500/20 dark:bg-teal-500/10">
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700 dark:text-teal-300">
+                    {cellPreview.languageName} translation
+                  </p>
+
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-teal-950 dark:text-teal-100">
+                    {cellPreview.translation}
+                  </p>
+                </section>
+              ) : (
+                <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Translation
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    This is the English source cell, so it does not have a
+                    separate translation.
+                  </p>
+                </section>
+              )}
+            </div>
+
+            <div className="mt-7 flex justify-end border-t border-slate-200 pt-5 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={closeCellPreview}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {modalOpen && selectedRow && modalMode && (
         <div
           role="dialog"
@@ -997,10 +1172,12 @@ export default function Home() {
 
                   if (exactLanguage) {
                     setSelectedLanguageId(exactLanguage._id);
+
                     setSelectedCellRowId(
                       selectedRow.translations?.[exactLanguage._id]?.rowId ||
                         "",
                     );
+
                     setLanguageText(
                       selectedRow.translations?.[exactLanguage._id]?.value ||
                         "",

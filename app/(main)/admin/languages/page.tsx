@@ -10,11 +10,13 @@ import { toast } from "sonner";
 type GlobalRole = "user" | "staff" | "admin";
 type LanguageRole = "user" | "editor" | "expert";
 
+type LanguageStatus = "active" | "archived" | "pending_deletion";
+
 type LanguageItem = {
   _id: string;
   name: string;
   countries: string[];
-  status: "active" | "archived";
+  status: LanguageStatus;
 };
 
 type LanguageUser = {
@@ -34,9 +36,15 @@ type Pagination = {
   totalPages: number;
 };
 
+type DeletionAction = "approve_deletion" | "refuse_deletion";
+
+type PendingDeletionLanguage = LanguageItem & {
+  status: "pending_deletion";
+};
+
 const ROLE_OPTIONS: LanguageRole[] = ["user", "editor", "expert"];
 
-const LANGUAGE_STATUS_OPTIONS: LanguageItem["status"][] = [
+const LANGUAGE_STATUS_OPTIONS: Array<"active" | "archived"> = [
   "active",
   "archived",
 ];
@@ -55,8 +63,21 @@ function getLanguageRoleClass(role: LanguageRole) {
   return "bg-slate-100 text-slate-700 dark:bg-neutral-800 dark:text-slate-300";
 }
 
+function getStatusClass(status: LanguageStatus) {
+  if (status === "pending_deletion") {
+    return "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200";
+  }
+
+  if (status === "archived") {
+    return "bg-slate-200 text-slate-700 dark:bg-neutral-700 dark:text-slate-200";
+  }
+
+  return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200";
+}
+
 export default function LanguagesPage() {
   const router = useRouter();
+
   const { data: session, isPending } = authClient.useSession();
 
   const [languages, setLanguages] = useState<LanguageItem[]>([]);
@@ -80,6 +101,9 @@ export default function LanguagesPage() {
 
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+  const [processingDeletionId, setProcessingDeletionId] = useState<
+    string | null
+  >(null);
 
   const globalRole = (
     session?.user as
@@ -90,6 +114,7 @@ export default function LanguagesPage() {
   )?.role;
 
   const canManageLanguages = globalRole === "admin" || globalRole === "staff";
+
   const isAdmin = globalRole === "admin";
 
   const filteredLanguages = useMemo(() => {
@@ -110,6 +135,15 @@ export default function LanguagesPage() {
     });
   }, [languages, languageSearch]);
 
+  const pendingDeletionLanguages = useMemo(
+    () =>
+      languages.filter(
+        (language): language is PendingDeletionLanguage =>
+          language.status === "pending_deletion",
+      ),
+    [languages],
+  );
+
   const resetExpandedLanguage = () => {
     setExpandedLanguage(null);
     setLanguageUsers([]);
@@ -123,8 +157,34 @@ export default function LanguagesPage() {
     });
   };
 
+  const loadLanguages = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/languages?scope=admin", {
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load languages.");
+      }
+
+      setLanguages(data.languages || []);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load languages.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (isPending) return;
+    if (isPending) {
+      return;
+    }
 
     if (!session || !canManageLanguages) {
       router.replace("/unauthorized");
@@ -132,48 +192,12 @@ export default function LanguagesPage() {
   }, [isPending, session, canManageLanguages, router]);
 
   useEffect(() => {
-    if (isPending || !session || !canManageLanguages) return;
-
-    let mounted = true;
-
-    const loadLanguages = async () => {
-      try {
-        setLoading(true);
-
-        const response = await fetch("/api/languages", {
-          cache: "no-store",
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load languages.");
-        }
-
-        if (mounted) {
-          setLanguages(data.languages || []);
-        }
-      } catch (error) {
-        if (mounted) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Failed to load languages.",
-          );
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
+    if (isPending || !session || !canManageLanguages) {
+      return;
+    }
 
     loadLanguages();
-
-    return () => {
-      mounted = false;
-    };
-  }, [isPending, session, canManageLanguages]);
+  }, [isPending, session, canManageLanguages, loadLanguages]);
 
   const loadLanguageUsers = useCallback(
     async (
@@ -237,7 +261,9 @@ export default function LanguagesPage() {
   );
 
   useEffect(() => {
-    if (!expandedLanguage) return;
+    if (!expandedLanguage) {
+      return;
+    }
 
     const timeout = window.setTimeout(() => {
       loadLanguageUsers(expandedLanguage, userSearch, 1, false);
@@ -268,8 +294,13 @@ export default function LanguagesPage() {
   };
 
   const loadMoreUsers = () => {
-    if (!expandedLanguage || loadingMoreUsers) return;
-    if (pagination.page >= pagination.totalPages) return;
+    if (!expandedLanguage || loadingMoreUsers) {
+      return;
+    }
+
+    if (pagination.page >= pagination.totalPages) {
+      return;
+    }
 
     loadLanguageUsers(expandedLanguage, userSearch, pagination.page + 1, true);
   };
@@ -339,7 +370,7 @@ export default function LanguagesPage() {
 
   const handleStatusChange = async (
     languageId: string,
-    newStatus: LanguageItem["status"],
+    newStatus: "active" | "archived",
   ) => {
     if (!isAdmin) {
       toast.error("Only admins can update language status.");
@@ -385,6 +416,95 @@ export default function LanguagesPage() {
       );
     } finally {
       setSavingStatusId(null);
+    }
+  };
+
+  const handleDeletionDecision = async (
+    languageId: string,
+    action: DeletionAction,
+  ) => {
+    if (!isAdmin) {
+      toast.error(
+        "Only global admins can approve or refuse language deletion requests.",
+      );
+      return;
+    }
+
+    const isApproval = action === "approve_deletion";
+
+    const confirmed = window.confirm(
+      isApproval
+        ? "Approve this deletion request? The language will be archived, removed from public language lists, and its related content will remain stored."
+        : "Refuse this deletion request? The language will return to its previous status.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setProcessingDeletionId(languageId);
+
+    try {
+      const response = await fetch(`/api/languages/${languageId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Failed to process the language deletion request.",
+        );
+      }
+
+      if (action === "approve_deletion") {
+        setLanguages((previousLanguages) =>
+          previousLanguages.map((language) =>
+            language._id === languageId
+              ? {
+                  ...language,
+                  status: "archived",
+                }
+              : language,
+          ),
+        );
+
+        toast.success(
+          "Deletion request approved. The language was archived and removed from public lists.",
+        );
+      } else {
+        const restoredStatus =
+          data.language?.status === "archived" ? "archived" : "active";
+
+        setLanguages((previousLanguages) =>
+          previousLanguages.map((language) =>
+            language._id === languageId
+              ? {
+                  ...language,
+                  status: restoredStatus,
+                }
+              : language,
+          ),
+        );
+
+        toast.success(
+          `Deletion request refused. The language was restored to ${restoredStatus}.`,
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to process the language deletion request.",
+      );
+    } finally {
+      setProcessingDeletionId(null);
     }
   };
 
@@ -434,9 +554,114 @@ export default function LanguagesPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Manage language status and user language roles.
+            Manage language status, review deletion requests, and manage user
+            language roles.
           </p>
         </div>
+
+        {isAdmin && (
+          <section className="mb-8 overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/70 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/10">
+            <div className="border-b border-amber-200 px-5 py-4 dark:border-amber-500/20">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">
+                    Global authority
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+                    Pending Language Deletion Requests
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Approval archives the language and hides it from public
+                    lists. Related content remains intact.
+                  </p>
+                </div>
+
+                <span className="w-fit rounded-full bg-amber-200 px-3 py-1.5 text-xs font-bold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">
+                  {pendingDeletionLanguages.length} pending
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+              {pendingDeletionLanguages.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-amber-200 bg-white/70 px-4 py-5 text-sm text-slate-600 dark:border-amber-500/20 dark:bg-slate-900/30 dark:text-slate-300">
+                  No language deletion requests are waiting for a decision.
+                </p>
+              ) : (
+                pendingDeletionLanguages.map((language) => (
+                  <article
+                    key={language._id}
+                    className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-500/20 dark:bg-slate-900"
+                  >
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="break-words text-lg font-bold text-slate-900 dark:text-white">
+                            {language.name}
+                          </h3>
+
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                            Pending deletion
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                          Countries:{" "}
+                          {language.countries.length > 0
+                            ? language.countries.join(", ")
+                            : "No countries listed"}
+                        </p>
+
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                          Approving this request archives the language. It will
+                          disappear from public language lists, while alphabets,
+                          essays, table entries, and related content remain
+                          stored for possible restoration.
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeletionDecision(
+                              language._id,
+                              "refuse_deletion",
+                            )
+                          }
+                          disabled={processingDeletionId === language._id}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-800 dark:text-slate-200 dark:hover:bg-neutral-700"
+                        >
+                          {processingDeletionId === language._id
+                            ? "Processing..."
+                            : "Refuse request"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeletionDecision(
+                              language._id,
+                              "approve_deletion",
+                            )
+                          }
+                          disabled={processingDeletionId === language._id}
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {processingDeletionId === language._id
+                            ? "Processing..."
+                            : "Approve and archive"}
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
         <div className="mb-6">
           <label
@@ -505,28 +730,48 @@ export default function LanguagesPage() {
                     </div>
 
                     <div>
-                      <select
-                        value={language.status}
-                        disabled={!isAdmin || savingStatusId === language._id}
-                        onChange={(event) =>
-                          handleStatusChange(
-                            language._id,
-                            event.target.value as LanguageItem["status"],
-                          )
-                        }
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm capitalize text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
-                      >
-                        {LANGUAGE_STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
+                      {language.status === "pending_deletion" ? (
+                        <div>
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-2 text-sm font-semibold capitalize ${getStatusClass(
+                              language.status,
+                            )}`}
+                          >
+                            Pending deletion
+                          </span>
 
-                      {!isAdmin && (
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          Admin only
-                        </p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            Awaiting global-admin decision.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={language.status}
+                            disabled={
+                              !isAdmin || savingStatusId === language._id
+                            }
+                            onChange={(event) =>
+                              handleStatusChange(
+                                language._id,
+                                event.target.value as "active" | "archived",
+                              )
+                            }
+                            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm capitalize text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                          >
+                            {LANGUAGE_STATUS_OPTIONS.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+
+                          {!isAdmin && (
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                              Admin only
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -578,6 +823,7 @@ export default function LanguagesPage() {
                       {loadingUsers ? (
                         <div className="flex items-center gap-3 py-8">
                           <div className="h-5 w-5 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+
                           <span className="text-sm text-slate-700 dark:text-slate-300">
                             Searching users...
                           </span>

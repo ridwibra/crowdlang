@@ -6,46 +6,26 @@ import Table from "@/models/Table";
 import { getSession } from "@/lib/server";
 import User from "@/models/User";
 
-interface PageProps {
-  params: Promise<{ url: string }>;
-}
-
-export default async function AddTablePage({ params }: PageProps) {
-  const { url } = await params;
-  const languageName = decodeURIComponent(url);
-
+export default async function AddTablePage() {
   await db.connect();
 
-  const language = await Language.findOne({
-    name: languageName,
-  }).lean();
-
-  if (!language) {
-    return (
-      <main className="flex min-h-[60vh] items-center justify-center bg-slate-50 px-4 py-12 dark:bg-slate-950">
-        <div className="w-full max-w-md rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm dark:border-red-900/60 dark:bg-red-950/30">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-2xl font-bold text-red-600 dark:bg-red-900/50 dark:text-red-300">
-            !
-          </div>
-
-          <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Language not found
-          </h1>
-
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            The language you are trying to add an entry to could not be found.
-          </p>
-        </div>
-      </main>
-    );
-  }
+  const languages = await Language.find({
+    status: { $ne: "pending_deletion" },
+  })
+    .sort({ name: 1 })
+    .lean();
 
   async function handleSubmit(formData: FormData) {
     "use server";
 
+    const languageId = formData.get("languageId") as string;
     const text = formData.get("text") as string;
     const translation = formData.get("translation") as string;
     const textType = formData.get("textType") as string;
+
+    if (!languageId) {
+      throw new Error("Please select a language");
+    }
 
     await db.connect();
 
@@ -63,6 +43,12 @@ export default async function AddTablePage({ params }: PageProps) {
       throw new Error("User not found in database");
     }
 
+    const language = await Language.findById(languageId).lean();
+
+    if (!language) {
+      throw new Error("Language not found");
+    }
+
     await Table.create({
       text,
       translation,
@@ -71,7 +57,8 @@ export default async function AddTablePage({ params }: PageProps) {
       createdBy: mongoUser._id,
     });
 
-    redirect(`/${encodeURIComponent(language.name)}`);
+    // redirect(`/${encodeURIComponent(language.name)}`);
+    redirect(`/`);
   }
 
   return (
@@ -95,11 +82,8 @@ export default async function AddTablePage({ params }: PageProps) {
                 </h1>
 
                 <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Add a word, phrase, translation, or other learning entry for{" "}
-                  <span className="font-semibold text-slate-800 dark:text-slate-100">
-                    {language.name}
-                  </span>
-                  .
+                  Select a language and add a word, phrase, translation, or
+                  other learning entry.
                 </p>
               </div>
             </div>
@@ -117,14 +101,16 @@ export default async function AddTablePage({ params }: PageProps) {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Complete the fields below, then save the entry to add it to the{" "}
-                {language.name} language table.
+                Select the language first, then complete the entry fields below.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/30 sm:p-5">
-              <ToggleFields languageName={language.name} />
-            </div>
+            <ToggleFields
+              languages={languages.map((language) => ({
+                _id: language._id.toString(),
+                name: language.name,
+              }))}
+            />
 
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end dark:border-slate-800">
               <button
@@ -137,16 +123,6 @@ export default async function AddTablePage({ params }: PageProps) {
             </div>
           </form>
         </section>
-
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-          <p className="font-semibold text-slate-700 dark:text-slate-200">
-            Adding to: {language.name}
-          </p>
-
-          <p className="mt-1 leading-5">
-            The entry will be saved directly to this language&apos;s table.
-          </p>
-        </div>
       </div>
     </main>
   );

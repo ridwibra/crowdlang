@@ -8,7 +8,7 @@ import DotLoaderSpinner from "../shared/DotLoader";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
-const SOCIAL_PROVIDERS = ["google", "facebook", "github", "microsoft"] as const;
+const SOCIAL_PROVIDERS = ["google", "github", "discord"] as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -291,7 +291,7 @@ export default function LoginPage() {
               or continue with
             </p>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {SOCIAL_PROVIDERS.map((provider) => (
                 <button
                   key={provider}
@@ -306,8 +306,8 @@ export default function LoginPage() {
         dark:hover:bg-[#334155]
       "
                 >
-                  {provider === "microsoft"
-                    ? "Microsoft"
+                  {provider === "github"
+                    ? "GitHub"
                     : provider.charAt(0).toUpperCase() + provider.slice(1)}
                 </button>
               ))}

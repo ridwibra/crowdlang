@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
@@ -155,6 +155,28 @@ export default function EssayForm({
     ],
     content: existingEssay?.translationBody || "",
   });
+
+  useEffect(() => {
+    if (!bodyEditor || !existingEssay) return;
+
+    const currentContent = bodyEditor.getHTML();
+    const nextContent = existingEssay.body || "";
+
+    if (currentContent !== nextContent) {
+      bodyEditor.commands.setContent(nextContent, { emitUpdate: false });
+    }
+  }, [bodyEditor, existingEssay]);
+
+  useEffect(() => {
+    if (!translationEditor || !existingEssay) return;
+
+    const currentContent = translationEditor.getHTML();
+    const nextContent = existingEssay.translationBody || "";
+
+    if (currentContent !== nextContent) {
+      translationEditor.commands.setContent(nextContent, { emitUpdate: false });
+    }
+  }, [translationEditor, existingEssay]);
 
   const handleImagesChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;

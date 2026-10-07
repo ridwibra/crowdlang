@@ -42,8 +42,8 @@ export default function AuthLayout({
           <Image
             src="/images/logo.png"
             alt={`${SITE_NAME} logo`}
-            width={40}
-            height={40}
+            width={60}
+            height={60}
             className="object-contain dark:invert"
           />
           <span className={`text-2xl font-bold ${pacifico.className}`}>

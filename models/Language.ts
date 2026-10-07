@@ -1,19 +1,25 @@
+// models/Language.ts
 import { LanguageType } from "@/utils/types";
 import mongoose, { Schema } from "mongoose";
 
 const languageSchema = new Schema<LanguageType>(
   {
-    name: { type: String, required: true, trim: true, unique: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
 
-   countries: {
+    countries: {
       type: [String],
       required: true,
-      set: (arr: string[]) => arr.map((c) => c.trim()),
+      set: (arr: string[]) => arr.map((country) => country.trim()),
     },
 
     status: {
       type: String,
-      enum: ["active", "archived"],
+      enum: ["active", "archived", "pending_deletion"],
       default: "active",
     },
 
@@ -22,8 +28,66 @@ const languageSchema = new Schema<LanguageType>(
       ref: "User",
       required: true,
     },
+
+    editRequest: {
+      requestedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+
+      requestedAt: {
+        type: Date,
+      },
+
+      proposedChanges: {
+        name: {
+          type: String,
+          trim: true,
+        },
+
+        countries: {
+          type: [String],
+          set: (arr: string[]) => arr.map((country) => country.trim()),
+        },
+
+        status: {
+          type: String,
+          enum: ["active", "archived"],
+        },
+      },
+
+      requestNote: {
+        type: String,
+        trim: true,
+        maxlength: 1000,
+      },
+    },
+
+    deletionRequest: {
+      requestedBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+
+      requestedAt: {
+        type: Date,
+      },
+
+      previousStatus: {
+        type: String,
+        enum: ["active", "archived"],
+      },
+
+      requestNote: {
+        type: String,
+        trim: true,
+        maxlength: 1000,
+      },
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  },
 );
 
 const Language =

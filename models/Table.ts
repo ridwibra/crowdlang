@@ -10,7 +10,7 @@ const tableSchema = new Schema<TableType>(
 
     textType: {
       type: String,
-      enum: ["word", "sentence", "expression", "passage"],
+      enum: ["word", "sentence", "expression", "paragraph"],
       required: true,
     },
 

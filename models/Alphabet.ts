@@ -4,11 +4,11 @@ import { AlphabetType } from "@/utils/types";
 
 const alphabetSchema = new Schema<AlphabetType>(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+   name: {
+  type: String,
+  trim: true,
+  default: "",
+},
 
     language: {
       type: Schema.Types.ObjectId,

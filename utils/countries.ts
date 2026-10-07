@@ -198,6 +198,7 @@ export const COUNTRIES = [
   "Sweden",
   "Switzerland",
   "Syria",
+  "Taiwan",
   "Tajikistan",
   "Tanzania",
   "Thailand",

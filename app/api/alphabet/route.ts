@@ -1,3 +1,4 @@
+//   /api/alphabet/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/utils/db";
 import Alphabet from "@/models/Alphabet";
@@ -62,22 +63,18 @@ export async function POST(request: NextRequest) {
 
     const { name, language, letters, status } = await request.json();
 
-    if (
-      !name ||
-      typeof name !== "string" ||
-      !name.trim() ||
-      !language ||
-      !letters ||
-      !Array.isArray(letters)
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "Name, language, and letters are required.",
-        },
-        { status: 400 },
-      );
-    }
+  if (
+  !language ||
+  !letters ||
+  !Array.isArray(letters)
+) {
+  return NextResponse.json(
+    {
+      message: "Language and letters are required.",
+    },
+    { status: 400 },
+  );
+}
 
     const languageDoc = await Language.findById(language).select(
       "_id name",
@@ -137,13 +134,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const alphabet = await Alphabet.create({
-      name: name.trim(),
-      language: languageDoc._id,
-      letters: rebuiltLetters,
-      status,
-      createdBy: mongoUser._id,
-    });
+const alphabet = await Alphabet.create({
+  name: typeof name === "string" ? name.trim() : "",
+  language: languageDoc._id,
+  letters: rebuiltLetters,
+  status,
+  createdBy: mongoUser._id,
+});
 
     return NextResponse.json(
       {
