@@ -10,14 +10,15 @@ const sections = [
     content: (
       <>
         <p>
-          {SITE_NAME} (“CrowdLang,” “we,” “us,” or “our”) respects your privacy.
-          This Privacy Policy explains how we collect, use, store, and share
-          information when you use our website, language tools, maps, reels,
-          translations, and related services (collectively, the “Service”).
+          {SITE_NAME} (“CrowdLangs,” “we,” “us,” or “our”) respects your
+          privacy. This Privacy Policy explains how we collect, use, store, and
+          share information when you use our website, language tools, maps,
+          reels, translations, and related services (collectively, the
+          “Service”).
         </p>
 
         <p className="mt-4">
-          By using CrowdLang, you understand that your information may be
+          By using CrowdLangs, you understand that your information may be
           handled as described in this Privacy Policy.
         </p>
       </>
@@ -104,7 +105,7 @@ const sections = [
     title: "3. How we use information",
     content: (
       <>
-        <p>We use information to operate, maintain, and improve CrowdLang.</p>
+        <p>We use information to operate, maintain, and improve CrowdLangs.</p>
 
         <ul className="mt-4 space-y-3">
           <li className="flex gap-3">
@@ -134,7 +135,7 @@ const sections = [
             <span aria-hidden="true" className="font-bold text-teal-600">
               ✓
             </span>
-            Protect CrowdLang, its users, and the public from harmful,
+            Protect CrowdLangs, its users, and the public from harmful,
             fraudulent, or unauthorized activity.
           </li>
 
@@ -158,7 +159,7 @@ const sections = [
       <>
         <p>
           Some information is intended to be visible to other users or visitors
-          of CrowdLang. This may include your display name, profile image,
+          of CrowdLangs. This may include your display name, profile image,
           language contributions, reels, captions, essays, translations,
           comments, likes, and other content you choose to submit publicly.
         </p>
@@ -166,7 +167,7 @@ const sections = [
         <p className="mt-4">
           Do not share sensitive personal information in public content. Once
           content is public, other people may view, copy, or share it outside
-          CrowdLang.
+          CrowdLangs.
         </p>
       </>
     ),
@@ -177,7 +178,7 @@ const sections = [
     content: (
       <>
         <p>
-          CrowdLang uses cookies or similar technologies that are necessary for
+          CrowdLangs uses cookies or similar technologies that are necessary for
           features such as authentication, session management, security, and
           remembering certain preferences.
         </p>
@@ -230,7 +231,7 @@ const sections = [
               ✓
             </span>
             When reasonably necessary to protect the rights, safety, security,
-            or integrity of CrowdLang, our users, or others.
+            or integrity of CrowdLangs, our users, or others.
           </li>
         </ul>
       </>
@@ -310,13 +311,14 @@ const sections = [
     content: (
       <>
         <p>
-          CrowdLang is not directed to children under 13, and we do not
+          CrowdLangs is not directed to children under 13, and we do not
           knowingly collect personal information from children under 13.
         </p>
 
         <p className="mt-4">
-          If you believe a child has provided personal information to CrowdLang,
-          please contact us so we can review and take appropriate action.
+          If you believe a child has provided personal information to
+          CrowdLangs, please contact us so we can review and take appropriate
+          action.
         </p>
       </>
     ),
@@ -391,7 +393,7 @@ export default function PrivacyPage() {
               <p className="font-bold">Privacy at a glance</p>
 
               <p className="mt-1">
-                We use your information to provide CrowdLang, manage accounts,
+                We use your information to provide CrowdLangs, manage accounts,
                 display the content you choose to share, and protect the
                 community. We do not sell your personal information.
               </p>

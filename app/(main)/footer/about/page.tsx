@@ -57,14 +57,14 @@ export default function AboutPage() {
                 href="/how-it-works"
                 className="rounded-xl bg-teal-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
               >
-                How CrowdLang works
+                How CrowdLangs works
               </Link>
 
               <Link
                 href="/register"
                 className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-950"
               >
-                Join CrowdLang
+                Join CrowdLangs
               </Link>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function AboutPage() {
             </h2>
 
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
-              We want CrowdLang to be a respectful space where people can value
+              We want CrowdLangs to be a respectful space where people can value
               language diversity and learn from one another with care.
             </p>
           </div>
@@ -151,7 +151,7 @@ export default function AboutPage() {
             <p className="mt-4 text-base leading-7 text-slate-600 dark:text-slate-300">
               A strong community depends on thoughtful participation. We ask
               everyone to contribute with care and respect for the people,
-              experiences, and cultures represented on CrowdLang.
+              experiences, and cultures represented on CrowdLangs.
             </p>
           </div>
 
@@ -188,8 +188,8 @@ export default function AboutPage() {
           </h2>
 
           <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-cyan-50">
-            Join the CrowdLang community and help ensure languages, stories, and
-            cultural knowledge remain visible for future generations.
+            Join the CrowdLangs community and help ensure languages, stories,
+            and cultural knowledge remain visible for future generations.
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">

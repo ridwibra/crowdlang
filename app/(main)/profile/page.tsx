@@ -307,7 +307,7 @@ export default function ProfilePage() {
             >
               Profile Overview
             </button>
-
+            {/* 
             <button
               type="button"
               onClick={() => setActiveSection("requests")}
@@ -318,9 +318,9 @@ export default function ProfilePage() {
               }`}
             >
               Request Language Role
-            </button>
+            </button> */}
 
-            <button
+            {/* <button
               type="button"
               onClick={() => setActiveSection("session")}
               className={`w-full rounded-xl px-4 py-3 text-left font-semibold transition ${
@@ -330,8 +330,8 @@ export default function ProfilePage() {
               }`}
             >
               Session Details
-            </button>
-
+            </button> */}
+            {/* 
             <button
               type="button"
               onClick={() => setActiveSection("activity")}
@@ -342,7 +342,7 @@ export default function ProfilePage() {
               }`}
             >
               Activity Feed
-            </button>
+            </button> */}
 
             <button
               type="button"

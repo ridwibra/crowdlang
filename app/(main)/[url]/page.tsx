@@ -1228,123 +1228,116 @@ export default async function LanguageDetailPage({
               </div>
             </section>
           </div>
-          {canViewOverview && (
-            <aside
-              aria-labelledby="language-overview-heading"
-              className="min-w-0 h-fit overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:sticky xl:top-6"
-            >
-              {/* Overview header */}
-              <div className="border-b border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50/50 p-5 dark:border-slate-800 dark:from-indigo-500/10 dark:via-slate-900 dark:to-violet-500/5 sm:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-400">
-                    Administration
-                  </p>
+          <aside
+            aria-labelledby="language-overview-heading"
+            className="min-w-0 h-fit overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:sticky xl:top-6"
+          >
+            {/* Public overview header */}
+            <div className="border-b border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50/50 p-5 dark:border-slate-800 dark:from-indigo-500/10 dark:via-slate-900 dark:to-violet-500/5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-400">
+                Overview
+              </p>
 
-                  <span className="rounded-full border border-indigo-200 bg-white/80 px-2.5 py-1 text-xs font-semibold capitalize text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300">
-                    {overviewUser?.role}
-                  </span>
+              <h2
+                id="language-overview-heading"
+                className="mt-3 text-xl font-bold tracking-tight text-slate-950 dark:text-white"
+              >
+                Language overview
+              </h2>
+
+              <p className="mt-2 break-words text-sm leading-6 text-slate-600 dark:text-slate-400">
+                Coverage and content for{" "}
+                <bdi className="font-medium text-slate-800 dark:text-slate-200">
+                  {language.name}
+                </bdi>
+                .
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6">
+              {/* Counts visible to everyone */}
+              <dl className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="flex items-start justify-between gap-4 pb-5">
+                  <dt>
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      Countries
+                    </span>
+
+                    <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Listed geographical coverage
+                    </span>
+                  </dt>
+
+                  <dd className="shrink-0 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
+                    {language.countries.length}
+                  </dd>
                 </div>
 
-                <h2
-                  id="language-overview-heading"
-                  className="mt-3 text-xl font-bold tracking-tight text-slate-950 dark:text-white"
+                <div className="flex items-start justify-between gap-4 py-5">
+                  <dt>
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      Alphabets
+                    </span>
+
+                    <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      Records / maximum allowed
+                    </span>
+                  </dt>
+
+                  <dd className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold tabular-nums text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    {alphabets.length} / {MAX_ALPHABETS}
+                  </dd>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 pt-5">
+                  <dt>
+                    <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      {essaySearchQuery ? "Matching essays" : "Essays shown"}
+                    </span>
+
+                    <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                      {essaySearchQuery
+                        ? "Results for the current search"
+                        : "Essays in the current collection"}
+                    </span>
+                  </dt>
+
+                  <dd className="shrink-0 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
+                    {essays.length}
+                  </dd>
+                </div>
+              </dl>
+
+              {/* Content areas visible to everyone */}
+              <section
+                aria-labelledby="overview-content-heading"
+                className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800"
+              >
+                <h3
+                  id="overview-content-heading"
+                  className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
                 >
-                  Language overview
-                </h2>
+                  Content areas
+                </h3>
 
-                <p className="mt-2 break-words text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  Coverage and content for{" "}
-                  <bdi className="font-medium text-slate-800 dark:text-slate-200">
-                    {language.name}
-                  </bdi>
-                  .
-                </p>
-              </div>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    "Alphabets",
+                    "Syntax & word order",
+                    "Essays & translations",
+                  ].map((label) => (
+                    <li
+                      key={label}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      {label}
+                    </li>
+                  ))}
+                </ul>
+              </section>
 
-              <div className="p-5 sm:p-6">
-                {/* Available counts */}
-                <dl className="divide-y divide-slate-100 dark:divide-slate-800">
-                  <div className="flex items-start justify-between gap-4 pb-5">
-                    <dt>
-                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
-                        Countries
-                      </span>
-
-                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        Listed geographical coverage
-                      </span>
-                    </dt>
-
-                    <dd className="shrink-0 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
-                      {language.countries.length}
-                    </dd>
-                  </div>
-
-                  <div className="flex items-start justify-between gap-4 py-5">
-                    <dt>
-                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
-                        Alphabets
-                      </span>
-
-                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        Records / maximum allowed
-                      </span>
-                    </dt>
-
-                    <dd className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold tabular-nums text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
-                      {alphabets.length} / {MAX_ALPHABETS}
-                    </dd>
-                  </div>
-
-                  <div className="flex items-start justify-between gap-4 pt-5">
-                    <dt>
-                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
-                        {essaySearchQuery ? "Matching essays" : "Essays shown"}
-                      </span>
-
-                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        {essaySearchQuery
-                          ? "Results for the current search"
-                          : "Essays in the current collection"}
-                      </span>
-                    </dt>
-
-                    <dd className="shrink-0 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
-                      {essays.length}
-                    </dd>
-                  </div>
-                </dl>
-
-                {/* All content areas */}
-                <section
-                  aria-labelledby="overview-content-heading"
-                  className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800"
-                >
-                  <h3
-                    id="overview-content-heading"
-                    className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
-                  >
-                    Content areas
-                  </h3>
-
-                  <ul className="mt-3 flex flex-wrap gap-2">
-                    {[
-                      "Table entries",
-                      "Alphabets",
-                      "Syntax & word order",
-                      "Essays & translations",
-                    ].map((label) => (
-                      <li
-                        key={label}
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                      >
-                        {label}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-
-                {/* Administrative permissions */}
+              {/* Only this box is restricted to admin/root */}
+              {canViewOverview && (
                 <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/10">
                   <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
                     Administrative access
@@ -1357,9 +1350,9 @@ export default async function LanguageDetailPage({
                     reels.
                   </p>
                 </div>
-              </div>
-            </aside>
-          )}
+              )}
+            </div>
+          </aside>
         </div>
       </div>
     </main>

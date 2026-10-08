@@ -7,7 +7,7 @@ const pageGuide = [
     icon: "🏠",
     title: "Start at the home page",
     description:
-      "Use the home page to get an overview of CrowdLang and navigate to the parts of the platform you need.",
+      "Use the home page to get an overview of CrowdLangs and navigate to the parts of the platform you need.",
     actionLabel: "Go home",
     href: "/",
     actionClass: "bg-teal-600 text-white hover:bg-teal-700 focus:ring-teal-500",
@@ -49,7 +49,7 @@ const pageGuide = [
     icon: "👤",
     title: "Create an account",
     description:
-      "Register for an account to become part of the CrowdLang community and access features that require signing in.",
+      "Register for an account to become part of the CrowdLangs community and access features that require signing in.",
     actionLabel: "Register",
     href: "/register",
     actionClass:
@@ -137,7 +137,7 @@ export default function HowItWorksPage() {
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <div className="max-w-3xl">
             <span className="inline-flex items-center rounded-full border border-teal-200 bg-white/80 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-teal-700 shadow-sm backdrop-blur dark:border-teal-800 dark:bg-slate-900/70 dark:text-teal-300">
-              CrowdLang guide
+              CrowdLangs guide
             </span>
 
             <h1 className="mt-6 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl dark:text-white">
@@ -146,7 +146,7 @@ export default function HowItWorksPage() {
 
             <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8 dark:text-slate-300">
               Find the right page, discover language content, and share your own
-              voice with the CrowdLang community.
+              voice with the CrowdLangs community.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -389,7 +389,7 @@ export default function HowItWorksPage() {
           </h2>
 
           <p className="mt-4 text-base leading-7 text-slate-600 dark:text-slate-300">
-            Start exploring the CrowdLang community today.
+            Start exploring the CrowdLangs community today.
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-3">

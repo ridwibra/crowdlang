@@ -7,6 +7,12 @@ import { getSession } from "@/lib/server";
 import User from "@/models/User";
 
 export default async function AddTablePage() {
+  const pageSession = await getSession();
+
+  if (!pageSession?.user?.email) {
+    redirect("/login");
+  }
+
   await db.connect();
 
   const languages = await Language.find({

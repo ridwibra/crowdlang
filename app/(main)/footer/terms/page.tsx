@@ -25,7 +25,7 @@ const sections = [
   },
   {
     id: "service",
-    title: "2. Using CrowdLang",
+    title: "2. Using CrowdLangs",
     content: (
       <>
         <p>
@@ -74,13 +74,13 @@ const sections = [
     content: (
       <>
         <p>
-          You retain ownership of content you submit to CrowdLang, including
+          You retain ownership of content you submit to CrowdLangs, including
           reels, audio, video, captions, transcripts, translations, comments,
           essays, images, and other material (“User Content”).
         </p>
 
         <p className="mt-4">
-          By submitting User Content, you grant CrowdLang a non-exclusive,
+          By submitting User Content, you grant CrowdLangs a non-exclusive,
           worldwide, royalty-free license to host, store, reproduce, format,
           display, distribute, and make the content available through the
           Service. This license exists only as needed to operate, improve, and
@@ -89,7 +89,7 @@ const sections = [
 
         <p className="mt-4">
           You represent that you own the User Content or have the necessary
-          rights, permissions, and approvals to share it through CrowdLang. Do
+          rights, permissions, and approvals to share it through CrowdLangs. Do
           not upload content that infringes another person’s copyright, privacy,
           publicity, or other rights.
         </p>
@@ -102,7 +102,7 @@ const sections = [
     content: (
       <>
         <p>
-          CrowdLang is intended to be a welcoming place for language learners,
+          CrowdLangs is intended to be a welcoming place for language learners,
           speakers, educators, and cultural communities. Use the platform with
           respect for people, languages, and cultures.
         </p>
@@ -165,7 +165,7 @@ const sections = [
 
         <p className="mt-4">
           We are not required to monitor all content, and the presence of
-          content on CrowdLang does not mean that we endorse or verify it.
+          content on CrowdLangs does not mean that we endorse or verify it.
         </p>
       </>
     ),
@@ -176,7 +176,7 @@ const sections = [
     content: (
       <>
         <p>
-          CrowdLang may include community-contributed language details,
+          CrowdLangs may include community-contributed language details,
           geographic information, alphabets, essays, translations, transcripts,
           and audio or video material. This content may be incomplete, may
           contain mistakes, or may reflect different perspectives and language
@@ -193,13 +193,13 @@ const sections = [
   },
   {
     id: "intellectual-property",
-    title: "8. CrowdLang intellectual property",
+    title: "8. CrowdLangs intellectual property",
     content: (
       <>
         <p>
-          The CrowdLang name, logo, branding, software, design, platform
+          The CrowdLangs name, logo, branding, software, design, platform
           features, and other Service materials are owned by or licensed to
-          CrowdLang and are protected by applicable intellectual property laws.
+          CrowdLangs and are protected by applicable intellectual property laws.
         </p>
 
         <p className="mt-4">
@@ -242,13 +242,13 @@ const sections = [
       <>
         <p>
           The Service is provided on an “as is” and “as available” basis.
-          CrowdLang does not guarantee that the Service will always be secure,
+          CrowdLangs does not guarantee that the Service will always be secure,
           uninterrupted, error-free, complete, or available at a particular
           time.
         </p>
 
         <p className="mt-4">
-          To the maximum extent permitted by applicable law, CrowdLang will not
+          To the maximum extent permitted by applicable law, CrowdLangs will not
           be liable for indirect, incidental, special, consequential, or
           punitive damages arising from your use of, or inability to use, the
           Service.
@@ -269,7 +269,7 @@ const sections = [
         <p className="mt-4">
           If a change materially affects your rights or obligations, we may
           provide additional notice through the Service or by another reasonable
-          method. Continuing to use CrowdLang after revised Terms take effect
+          method. Continuing to use CrowdLangs after revised Terms take effect
           means you accept the revised Terms.
         </p>
       </>
@@ -326,7 +326,7 @@ export default function TermsPage() {
               <p className="font-bold">Important</p>
 
               <p className="mt-1">
-                By using CrowdLang, you agree to follow these Terms and to use
+                By using CrowdLangs, you agree to follow these Terms and to use
                 the community respectfully.
               </p>
             </div>

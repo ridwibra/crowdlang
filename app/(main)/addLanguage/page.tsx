@@ -2,172 +2,292 @@
 
 import DotLoaderSpinner from "@/components/shared/DotLoader";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { COUNTRIES } from "@/utils/countries";
+import { authClient } from "@/lib/auth-client";
 
 export default function LanguageForm() {
   const [name, setName] = useState("");
-  const [countries, setCountries] = useState([""]);
+  const [countries, setCountries] = useState<string[]>([""]);
 
   const [nameError, setNameError] = useState("");
   const [countriesError, setCountriesError] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">("error");
 
   const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(false);
+
   const router = useRouter();
 
-  const updateCountry = (index: number, value: string) => {
-    setCountries((prev) => prev.map((c, i) => (i === index ? value : c)));
+  const {
+    data: session,
+    isPending,
+    error: sessionError,
+  } = authClient.useSession();
 
-    if (!value.trim()) {
-      setCountriesError("Country is required.");
-    } else {
-      setCountriesError("");
+  useEffect(() => {
+    if (!isPending && !sessionError && !session?.user) {
+      router.replace("/login");
     }
+  }, [isPending, sessionError, session, router]);
+
+  useEffect(() => {
+    if (!created) return;
+
+    const timeout = setTimeout(() => {
+      router.push("/");
+      router.refresh();
+    }, 800);
+
+    return () => clearTimeout(timeout);
+  }, [created, router]);
+
+  const busy = loading || created;
+
+  const updateCountry = (index: number, value: string) => {
+    setCountries((prev) =>
+      prev.map((country, i) => (i === index ? value : country)),
+    );
+
+    setCountriesError("");
   };
 
-  const addCountry = () => setCountries((prev) => [...prev, ""]);
-  const removeCountry = (index: number) =>
-    setCountries((prev) => prev.filter((_, i) => i !== index));
+  const addCountry = () => {
+    setCountries((prev) => [...prev, ""]);
+    setCountriesError("");
+  };
+
+  const removeCountry = (index: number) => {
+    setCountries((prev) =>
+      prev.length > 1 ? prev.filter((_, i) => i !== index) : prev,
+    );
+
+    setCountriesError("");
+  };
 
   const validateForm = () => {
     let valid = true;
+
     setMessage("");
+    setMessageType("error");
 
     if (!name.trim()) {
-      setNameError("Language name is required");
+      setNameError("Language name is required.");
       valid = false;
     } else if (name.trim().length < 2) {
-      setNameError("Language name must be at least 2 characters");
+      setNameError("Language name must be at least 2 characters.");
       valid = false;
     } else {
       setNameError("");
     }
 
-    for (const c of countries) {
-      if (!c.trim()) {
-        setCountriesError("Country is required.");
-        valid = false;
-        break;
-      }
+    if (
+      countries.length === 0 ||
+      countries.some((country) => !country.trim())
+    ) {
+      setCountriesError("Please select a country for each entry.");
+      valid = false;
+    } else {
+      setCountriesError("");
     }
 
     return valid;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isPending || busy) return;
+
+    if (sessionError) {
+      setMessageType("error");
+      setMessage("Unable to verify your session. Please reload and try again.");
+      return;
+    }
+
+    if (!session?.user) {
+      router.replace("/login");
+      return;
+    }
+
     if (!validateForm()) return;
 
     setLoading(true);
     setMessage("");
+    setMessageType("error");
 
     try {
       const res = await fetch("/api/languages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, countries }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          countries: countries.map((country) => country.trim()),
+        }),
       });
+
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
 
       const data = await res.json();
 
       if (!res.ok) {
+        const errorMessage =
+          typeof data.message === "string"
+            ? data.message
+            : "Unable to create the language.";
+
+        setMessageType("error");
+
         if (data.field === "name") {
-          setNameError(data.message);
+          setNameError(errorMessage);
         } else if (data.field === "countries") {
-          setCountriesError(data.message);
+          setCountriesError(errorMessage);
         } else {
-          setMessage(data.message);
+          setMessage(errorMessage);
         }
-        setLoading(false);
+
         return;
       }
 
+      setMessageType("success");
       setMessage("Language created successfully.");
-
-      setTimeout(() => {
-        router.refresh();
-        router.push("/");
-      }, 800);
 
       setName("");
       setCountries([""]);
-    } catch (error) {
-      setMessage("Something went wrong.");
+      setNameError("");
+      setCountriesError("");
+      setCreated(true);
+    } catch {
+      setMessageType("error");
+      setMessage("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (isPending) {
+    return <DotLoaderSpinner loading={true} />;
+  }
+
+  if (sessionError) {
+    return (
+      <div
+        role="alert"
+        className="mx-auto max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+      >
+        Unable to verify your session. Please reload and try again.
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
+
   return (
     <>
       {loading && <DotLoaderSpinner loading={loading} />}
 
-      <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-neutral-900 rounded-lg shadow-md">
+      <div className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-md dark:bg-neutral-900">
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-4 px-3 py-1 bg-neutral-200 dark:bg-neutral-700 rounded hover:bg-neutral-300 dark:hover:bg-neutral-600"
+          disabled={busy}
+          className="mb-4 rounded bg-neutral-200 px-3 py-1 hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-700 dark:hover:bg-neutral-600"
         >
           ← Back
         </button>
 
-        <h1 className="text-2xl font-semibold mb-6">ADD A NEW LANGUAGE</h1>
+        <h1 className="mb-6 text-2xl font-semibold">ADD A NEW LANGUAGE</h1>
 
         {message && (
-          <p className="mb-4 text-center text-sm text-red-600 dark:text-red-400">
+          <p
+            role={messageType === "error" ? "alert" : "status"}
+            className={`mb-4 rounded-lg border px-4 py-3 text-center text-sm ${
+              messageType === "success"
+                ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400"
+                : "border-red-200 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
+            }`}
+          >
             {message}
           </p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Language Name */}
+          {/* Language name */}
           <div>
-            <label className="block font-medium mb-1">Language Name</label>
+            <label htmlFor="language-name" className="mb-1 block font-medium">
+              Language Name
+            </label>
+
             <input
+              id="language-name"
+              name="name"
               type="text"
-              className={`
-                w-full px-3 py-2 rounded-md border 
-                dark:border-neutral-700 dark:bg-neutral-800
-                ${nameError ? "border-red-500" : "border-neutral-300"}
-              `}
+              disabled={busy}
+              aria-invalid={Boolean(nameError)}
+              aria-describedby={nameError ? "language-name-error" : undefined}
+              className={`w-full rounded-md border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-800 ${
+                nameError
+                  ? "border-red-500 dark:border-red-500"
+                  : "border-neutral-300 dark:border-neutral-700"
+              }`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameError("");
+              }}
               placeholder="e.g., Hausa"
             />
+
             {nameError && (
-              <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+              <p
+                id="language-name-error"
+                className="mt-1 text-sm text-red-600 dark:text-red-400"
+              >
                 {nameError}
               </p>
             )}
           </div>
 
-          {/* Countries Dropdown */}
-          <div>
-            <label className="block font-medium mb-2">
+          {/* Countries dropdowns */}
+          <fieldset>
+            <legend className="mb-2 font-medium">
               Countries/Territories Widely Spoken In
-            </label>
+            </legend>
 
             {countries.map((country, index) => (
               <div
                 key={index}
-                className={`
-                  flex gap-3 mb-3 items-center p-3 rounded-md
-                  bg-neutral-50 dark:bg-neutral-800
-                  border
-                  ${countriesError ? "border-red-500" : "border-neutral-200"}
-                `}
+                className={`mb-3 flex items-center gap-3 rounded-md border bg-neutral-50 p-3 dark:bg-neutral-800 ${
+                  countriesError
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-neutral-200 dark:border-neutral-700"
+                }`}
               >
                 <select
-                  className={`
-                    flex-1 px-3 py-2 rounded-md border 
-                    dark:border-neutral-700 dark:bg-neutral-900
-                    ${countriesError ? "border-red-500" : "border-neutral-300"}
-                  `}
+                  aria-label={`Country or territory ${index + 1}`}
+                  aria-invalid={Boolean(countriesError)}
+                  aria-describedby={
+                    countriesError ? "countries-error" : undefined
+                  }
+                  disabled={busy}
+                  className={`min-w-0 flex-1 rounded-md border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-900 ${
+                    countriesError
+                      ? "border-red-500 dark:border-red-500"
+                      : "border-neutral-300 dark:border-neutral-700"
+                  }`}
                   value={country}
                   onChange={(e) => updateCountry(index, e.target.value)}
                 >
                   <option value="">Select a country...</option>
+
                   {COUNTRIES.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -178,8 +298,10 @@ export default function LanguageForm() {
                 {countries.length > 1 && (
                   <button
                     type="button"
+                    disabled={busy}
                     onClick={() => removeCountry(index)}
-                    className="text-red-500 hover:text-red-700 font-semibold"
+                    aria-label={`Remove country or territory ${index + 1}`}
+                    className="font-semibold text-red-500 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     ✕
                   </button>
@@ -188,27 +310,35 @@ export default function LanguageForm() {
             ))}
 
             {countriesError && (
-              <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+              <p
+                id="countries-error"
+                className="mt-1 text-sm text-red-600 dark:text-red-400"
+              >
                 {countriesError}
               </p>
             )}
 
             <button
               type="button"
+              disabled={busy}
               onClick={addCountry}
-              className="px-4 py-2 bg-neutral-200 dark:bg-neutral-700 rounded-md hover:bg-neutral-300 dark:hover:bg-neutral-600"
+              className="mt-3 rounded-md bg-neutral-200 px-4 py-2 hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-700 dark:hover:bg-neutral-600"
             >
               + Add Country/Territory
             </button>
-          </div>
+          </fieldset>
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+            disabled={busy}
+            className="w-full rounded-md bg-blue-600 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create Language"}
+            {loading
+              ? "Creating..."
+              : created
+                ? "Created! Redirecting..."
+                : "Create Language"}
           </button>
         </form>
       </div>

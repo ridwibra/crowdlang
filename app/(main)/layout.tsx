@@ -91,20 +91,23 @@ export default function MainLayout({
       </div>
 
       {/* FOOTER */}
-      <footer className="w-full shrink-0 border-t border-gray-200 bg-white px-4 py-4 text-sm dark:border-gray-700 dark:bg-gray-900 sm:px-6">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
+      <footer className="w-full shrink-0 border-t border-gray-200 bg-white px-4 py-6 text-sm dark:border-gray-700 dark:bg-gray-900 sm:px-6 lg:px-8">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
           {/* Brand */}
           <div className="min-w-0 space-y-3">
-            <Link href="/" className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex max-w-full items-center gap-3"
+            >
               <Image
                 src="/images/logo.png"
                 alt={`${SITE_NAME} logo`}
                 width={48}
                 height={48}
-                className="h-12 w-auto object-contain dark:invert"
+                className="h-12 w-auto shrink-0 object-contain dark:invert"
               />
 
-              <span className="truncate text-xl font-semibold text-gray-800 dark:text-gray-200">
+              <span className="min-w-0 break-words text-xl font-semibold text-gray-800 dark:text-gray-200">
                 {SITE_NAME}
               </span>
             </Link>
@@ -116,7 +119,7 @@ export default function MainLayout({
           </div>
 
           {/* Discover */}
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
               Discover
             </h3>
@@ -167,11 +170,11 @@ export default function MainLayout({
             </h3>
 
             <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-              <li className="break-words">
+              <li>
                 <a
                   href={`mailto:${SENDER_EMAIL_ADDRESS}`}
                   aria-label={`Email ${SITE_NAME}`}
-                  className="transition hover:text-gray-800 dark:hover:text-gray-200"
+                  className="break-words transition [overflow-wrap:anywhere] hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   {SENDER_EMAIL_ADDRESS}
                 </a>
@@ -180,43 +183,44 @@ export default function MainLayout({
           </div>
 
           {/* Legal
-          <div>
-            <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
-              Legal
-            </h3>
+    <div className="min-w-0">
+      <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
+        Legal
+      </h3>
 
-            <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-              <li>
-                <Link
-                  href="/footer/terms"
-                  className="hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  Terms of Service
-                </Link>
-              </li>
+      <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+        <li>
+          <Link
+            href="/footer/terms"
+            className="hover:text-gray-800 dark:hover:text-gray-200"
+          >
+            Terms of Service
+          </Link>
+        </li>
 
-              <li>
-                <Link
-                  href="/footer/privacy"
-                  className="hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  Privacy Policy
-                </Link>
-              </li>
+        <li>
+          <Link
+            href="/footer/privacy"
+            className="hover:text-gray-800 dark:hover:text-gray-200"
+          >
+            Privacy Policy
+          </Link>
+        </li>
 
-              <li>
-                <Link
-                  href="/footer/delete"
-                  className="hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  Account Deletion Policy
-                </Link>
-              </li>
-            </ul>
-          </div> */}
+        <li>
+          <Link
+            href="/footer/delete"
+            className="hover:text-gray-800 dark:hover:text-gray-200"
+          >
+            Account Deletion Policy
+          </Link>
+        </li>
+      </ul>
+    </div>
+    */}
 
           {/* Share */}
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
               Share
             </h3>
@@ -225,7 +229,7 @@ export default function MainLayout({
           </div>
         </div>
 
-        <div className="mt-4 border-t border-gray-200 pt-3 text-center text-gray-600 dark:border-gray-700 dark:text-gray-400">
+        <div className="mx-auto mt-6 w-full max-w-6xl border-t border-gray-200 pt-4 text-center leading-relaxed text-gray-600 dark:border-gray-700 dark:text-gray-400">
           © {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
         </div>
       </footer>

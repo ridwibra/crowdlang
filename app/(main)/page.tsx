@@ -567,6 +567,64 @@ export default function Home() {
     setActionsOpenFor(rowKey);
   };
 
+  const topScrollbarRef = useRef<HTMLDivElement>(null);
+  const topScrollbarContentRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const tableElementRef = useRef<HTMLTableElement>(null);
+
+  useEffect(() => {
+    const topScrollbar = topScrollbarRef.current;
+    const topContent = topScrollbarContentRef.current;
+    const tableScroller = tableScrollRef.current;
+    const table = tableElementRef.current;
+
+    if (!topScrollbar || !topContent || !tableScroller || !table) {
+      return;
+    }
+
+    const updateScrollbarWidth = () => {
+      topContent.style.width = `${tableScroller.scrollWidth}px`;
+
+      if (topScrollbar.scrollLeft !== tableScroller.scrollLeft) {
+        topScrollbar.scrollLeft = tableScroller.scrollLeft;
+      }
+    };
+
+    const handleTopScroll = () => {
+      if (tableScroller.scrollLeft !== topScrollbar.scrollLeft) {
+        tableScroller.scrollLeft = topScrollbar.scrollLeft;
+      }
+    };
+
+    const handleTableScroll = () => {
+      if (topScrollbar.scrollLeft !== tableScroller.scrollLeft) {
+        topScrollbar.scrollLeft = tableScroller.scrollLeft;
+      }
+    };
+
+    updateScrollbarWidth();
+
+    topScrollbar.addEventListener("scroll", handleTopScroll, {
+      passive: true,
+    });
+
+    tableScroller.addEventListener("scroll", handleTableScroll, {
+      passive: true,
+    });
+
+    const resizeObserver = new ResizeObserver(updateScrollbarWidth);
+
+    resizeObserver.observe(tableScroller);
+    resizeObserver.observe(table);
+
+    return () => {
+      resizeObserver.disconnect();
+
+      topScrollbar.removeEventListener("scroll", handleTopScroll);
+      tableScroller.removeEventListener("scroll", handleTableScroll);
+    };
+  }, [tableMinWidth, visibleLanguages.length, filteredRows.length]);
+
   if (loading) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center px-4">
@@ -882,137 +940,160 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="w-full max-w-full overflow-x-auto overflow-y-auto">
-          <table
-            className="border-separate border-spacing-0 text-sm"
-            style={{ minWidth: `${tableMinWidth}px` }}
+        <div className="min-w-0 w-full max-w-full">
+          {/* Top horizontal scrollbar */}
+          <div
+            ref={topScrollbarRef}
+            role="region"
+            aria-label="Top horizontal scrollbar for the language table"
+            tabIndex={0}
+            className="w-full overflow-x-auto overflow-y-hidden border-b border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900"
           >
-            <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
-              <tr>
-                <th className="w-28 min-w-28 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                  Actions
-                </th>
+            <div
+              ref={topScrollbarContentRef}
+              aria-hidden="true"
+              className="h-3"
+              style={{ width: `${tableMinWidth}px` }}
+            />
+          </div>
 
-                <th className="w-80 min-w-64 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                  English
-                </th>
-
-                {visibleLanguages.map((language) => (
-                  <th
-                    key={language._id}
-                    className="w-64 min-w-56 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300"
-                  >
-                    <Link
-                      href={`/${encodeURIComponent(language.name)}`}
-                      title={`View ${language.name} language details`}
-                      className="flex w-full items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-1.5 text-xs font-bold normal-case tracking-normal text-teal-700 transition hover:-translate-y-0.5 hover:border-teal-500 hover:bg-teal-600 hover:text-white hover:shadow-sm dark:border-teal-500/30 dark:bg-teal-950/40 dark:text-teal-300"
-                    >
-                      <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
-                        {language.name}
-                      </span>
-
-                      <span aria-hidden="true" className="shrink-0">
-                        ↗
-                      </span>
-                    </Link>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredRows.length === 0 ? (
+          {/* Table and its existing bottom scrollbar */}
+          <div
+            ref={tableScrollRef}
+            className="w-full max-w-full overflow-x-auto overflow-y-auto"
+          >
+            <table
+              ref={tableElementRef}
+              className="border-separate border-spacing-0 text-sm"
+              style={{ minWidth: `${tableMinWidth}px` }}
+            >
+              <thead className="sticky top-0 z-10 bg-slate-100 shadow-sm dark:bg-slate-800">
                 <tr>
-                  <td
-                    colSpan={visibleLanguages.length + 2}
-                    className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400"
-                  >
-                    No translations found. Add a translation to begin populating
-                    this table.
-                  </td>
-                </tr>
-              ) : (
-                filteredRows.map((row, rowIndex) => {
-                  const rowKey = `${row.english}-${rowIndex}`;
+                  <th className="w-28 min-w-28 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                    Actions
+                  </th>
 
-                  return (
-                    <tr
-                      key={rowKey}
-                      className="transition hover:bg-teal-50/60 odd:bg-slate-50 dark:odd:bg-slate-900/60 dark:hover:bg-teal-950/20"
+                  <th className="w-80 min-w-64 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                    English
+                  </th>
+
+                  {visibleLanguages.map((language) => (
+                    <th
+                      key={language._id}
+                      className="w-64 min-w-56 border-b border-r border-slate-200 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:text-slate-300"
                     >
-                      <td
-                        ref={(element) => {
-                          actionsRefs.current[rowKey] = element;
-                        }}
-                        className="w-28 min-w-28 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800"
+                      <Link
+                        href={`/${encodeURIComponent(language.name)}`}
+                        title={`View ${language.name} language details`}
+                        className="flex w-full items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-1.5 text-xs font-bold normal-case tracking-normal text-teal-700 transition hover:-translate-y-0.5 hover:border-teal-500 hover:bg-teal-600 hover:text-white hover:shadow-sm dark:border-teal-500/30 dark:bg-teal-950/40 dark:text-teal-300"
                       >
-                        <button
-                          type="button"
-                          aria-haspopup="menu"
-                          aria-expanded={actionsOpenFor === rowKey}
-                          onClick={() => toggleActionsMenu(rowKey)}
-                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-slate-700 px-2 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
+                        <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+                          {language.name}
+                        </span>
+
+                        <span aria-hidden="true" className="shrink-0">
+                          ↗
+                        </span>
+                      </Link>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={visibleLanguages.length + 2}
+                      className="px-6 py-16 text-center text-sm text-slate-500 dark:text-slate-400"
+                    >
+                      No translations found. Add a translation to begin
+                      populating this table.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRows.map((row, rowIndex) => {
+                    const rowKey = `${row.english}-${rowIndex}`;
+
+                    return (
+                      <tr
+                        key={rowKey}
+                        className="transition hover:bg-teal-50/60 odd:bg-slate-50 dark:odd:bg-slate-900/60 dark:hover:bg-teal-950/20"
+                      >
+                        <td
+                          ref={(element) => {
+                            actionsRefs.current[rowKey] = element;
+                          }}
+                          className="w-28 min-w-28 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800"
                         >
-                          Actions
-                          <span aria-hidden="true">▾</span>
-                        </button>
-                      </td>
-
-                      <td className="w-80 min-w-64 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openCellPreview(row.english, "", "English")
-                          }
-                          title="View full English text"
-                          className="block w-full text-left font-medium text-slate-900 transition hover:text-teal-700 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:text-white dark:hover:text-teal-300 dark:focus:ring-offset-slate-900"
-                        >
-                          <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
-                            {row.english}
-                          </span>
-                        </button>
-                      </td>
-
-                      {visibleLanguages.map((language) => {
-                        const translation =
-                          row.translations?.[language._id]?.value || "";
-
-                        return (
-                          <td
-                            key={language._id}
-                            className="w-64 min-w-56 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800"
+                          <button
+                            type="button"
+                            aria-haspopup="menu"
+                            aria-expanded={actionsOpenFor === rowKey}
+                            onClick={() => toggleActionsMenu(rowKey)}
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-slate-700 px-2 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500"
                           >
-                            {translation ? (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openCellPreview(
-                                    row.english,
-                                    translation,
-                                    language.name,
-                                  )
-                                }
-                                title={`View full ${language.name} translation`}
-                                className="block w-full text-left text-slate-700 transition hover:text-teal-700 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:text-slate-200 dark:hover:text-teal-300 dark:focus:ring-offset-slate-900"
-                              >
-                                <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
-                                  {translation}
+                            Actions
+                            <span aria-hidden="true">▾</span>
+                          </button>
+                        </td>
+
+                        <td className="w-80 min-w-64 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openCellPreview(row.english, "", "English")
+                            }
+                            title="View full English text"
+                            className="block w-full text-left font-medium text-slate-900 transition hover:text-teal-700 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:text-white dark:hover:text-teal-300 dark:focus:ring-offset-slate-900"
+                          >
+                            <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
+                              {row.english}
+                            </span>
+                          </button>
+                        </td>
+
+                        {visibleLanguages.map((language) => {
+                          const translation =
+                            row.translations?.[language._id]?.value || "";
+
+                          return (
+                            <td
+                              key={language._id}
+                              className="w-64 min-w-56 border-b border-r border-slate-200 px-3 py-3 align-top dark:border-slate-800"
+                            >
+                              {translation ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openCellPreview(
+                                      row.english,
+                                      translation,
+                                      language.name,
+                                    )
+                                  }
+                                  title={`View full ${language.name} translation`}
+                                  className="block w-full text-left text-slate-700 transition hover:text-teal-700 hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:text-slate-200 dark:hover:text-teal-300 dark:focus:ring-offset-slate-900"
+                                >
+                                  <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
+                                    {translation}
+                                  </span>
+                                </button>
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-600">
+                                  —
                                 </span>
-                              </button>
-                            ) : (
-                              <span className="text-slate-400 dark:text-slate-600">
-                                —
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
       {typeof document !== "undefined" &&

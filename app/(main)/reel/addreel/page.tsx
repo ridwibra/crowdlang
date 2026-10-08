@@ -1,9 +1,18 @@
 import db from "@/utils/db";
 import Language from "@/models/Language";
 import AddReelForm from "@/components/AddReelForm";
+import { getSession } from "@/lib/server";
+import { redirect } from "next/navigation";
 
 export default async function AddReelPage() {
+  const session = await getSession();
+
+  if (!session?.user?.email) {
+    redirect("/login");
+  }
+
   await db.connect();
+
   const languagesRaw = await Language.find().lean();
 
   const languages = languagesRaw.map((lang: any) => ({

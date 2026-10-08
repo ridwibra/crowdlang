@@ -23,6 +23,11 @@ function serializeComments(comments: any[] = []) {
       (comment) =>
         !comment.status || comment.status === "visible",
     )
+    .sort(
+      (first, second) =>
+        new Date(second.createdAt).getTime() -
+        new Date(first.createdAt).getTime(),
+    )
     .map((comment) => ({
       _id: comment._id.toString(),
       text: comment.text || "",
