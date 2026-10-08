@@ -15,7 +15,7 @@ export interface UserType {
   image?: string;
 
   // Custom App Fields
-  role: "user" | "staff" | "admin";
+  role: "user" | "staff" | "admin" | "root";
   avatar?: MediaType;
   bio:string;
 

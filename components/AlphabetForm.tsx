@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { toast } from "sonner";
 
 interface AlphabetFormProps {
   language: {
@@ -10,11 +11,15 @@ interface AlphabetFormProps {
   existingAlphabet?: {
     _id: string;
     name?: string;
-    letters: { character: string }[];
+    letters: {
+      character: string;
+      order?: number;
+      ipa?: string;
+      audioUrl?: string;
+    }[];
   } | null;
   closeForm: () => void;
 }
-
 export default function AlphabetForm({
   language,
   existingAlphabet,
@@ -46,8 +51,14 @@ export default function AlphabetForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (loading) {
+      return;
+    }
+
     if (parsedLetters.length === 0) {
-      setError("Add at least one letter before saving.");
+      const message = "Add at least one letter before saving.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -55,6 +66,27 @@ export default function AlphabetForm({
     setError("");
 
     try {
+      // Match existing characters so editing does not clear their metadata.
+      const remainingExistingLetters = [...(existingAlphabet?.letters ?? [])];
+
+      const rebuiltLetters = parsedLetters.map((character, index) => {
+        const existingIndex = remainingExistingLetters.findIndex(
+          (letter) => letter.character.trim() === character,
+        );
+
+        const existingLetter =
+          existingIndex >= 0
+            ? remainingExistingLetters.splice(existingIndex, 1)[0]
+            : undefined;
+
+        return {
+          character,
+          order: index + 1,
+          ipa: existingLetter?.ipa ?? "",
+          audioUrl: existingLetter?.audioUrl ?? "",
+        };
+      });
+
       const response = await fetch(
         existingAlphabet
           ? `/api/alphabet/${existingAlphabet._id}`
@@ -65,34 +97,50 @@ export default function AlphabetForm({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            name,
+            name: name.trim(),
             language: language._id,
-            letters: parsedLetters.map((character, index) => ({
-              character,
-              order: index + 1,
-              ipa: "",
-              audioUrl: "",
-            })),
+            letters: rebuiltLetters,
           }),
         },
       );
 
-      const data = await response.json();
+      const data: { message?: string } = await response
+        .json()
+        .catch(() => ({}));
 
       if (!response.ok) {
-        setError(data.message || "Something went wrong. Please try again.");
+        const message =
+          data.message ||
+          (response.status === 403
+            ? "Only this alphabet's creator, an admin, or root can edit it."
+            : response.status === 401
+              ? "Please sign in to continue."
+              : "Something went wrong. Please try again.");
+
+        toast.error(message);
+
+        // Permission errors use a toast; other errors also appear in the form.
+        if (response.status !== 401 && response.status !== 403) {
+          setError(message);
+        }
+
         return;
       }
 
       closeForm();
       window.location.reload();
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.";
+
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   }
-
   return (
     <form
       onSubmit={handleSubmit}

@@ -4,6 +4,7 @@ import DotLoaderSpinner from "@/components/shared/DotLoader";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
 interface LanguageType {
@@ -406,53 +407,87 @@ export default function Home() {
   };
 
   const handleSave = async () => {
-    if (!selectedRow || !modalMode || !selectedCellRowId) {
+    if (saving) {
       return;
     }
 
-    if (modalMode === "edit" && !selectedLanguageId) {
+    if (!selectedRow || !modalMode || !selectedCellRowId) {
+      toast.error("Please select a translation.");
       return;
+    }
+
+    if (modalMode === "edit") {
+      if (!selectedLanguageId) {
+        toast.error("Please select a language.");
+        return;
+      }
+
+      if (!englishText.trim() || !languageText.trim()) {
+        toast.error("English text and translation are required.");
+        return;
+      }
     }
 
     setSaving(true);
 
     try {
-      if (modalMode === "delete") {
-        const response = await fetch(`/api/table/${selectedCellRowId}`, {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to delete translation.");
-        }
-
-        await loadData();
-        closeModal();
-
-        return;
-      }
+      const isDelete = modalMode === "delete";
 
       const response = await fetch(`/api/table/${selectedCellRowId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: englishText.trim(),
-          translation: languageText.trim(),
-          language: selectedLanguageId,
-          textType: selectedRow.textType,
-        }),
+        method: isDelete ? "DELETE" : "PUT",
+        ...(isDelete
+          ? {}
+          : {
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                text: englishText.trim(),
+                translation: languageText.trim(),
+                language: selectedLanguageId,
+                textType: selectedRow.textType,
+              }),
+            }),
       });
 
+      const data: { message?: string } = await response
+        .json()
+        .catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error("Failed to update translation.");
+        if (response.status === 403) {
+          toast.error(
+            data.message ||
+              `Only this translation's creator, an admin, or root can ${
+                isDelete ? "delete" : "edit"
+              } it.`,
+          );
+          return;
+        }
+
+        if (response.status === 401) {
+          toast.error("Please sign in to edit or delete a translation.");
+          return;
+        }
+
+        throw new Error(
+          data.message ||
+            (isDelete
+              ? "Failed to delete translation."
+              : "Failed to update translation."),
+        );
       }
+
+      toast.success(
+        isDelete
+          ? "Translation deleted successfully."
+          : "Translation updated successfully.",
+      );
 
       await loadData();
       closeModal();
     } catch (error) {
-      setLoadError(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Something went wrong while saving changes.",

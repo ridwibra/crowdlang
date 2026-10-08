@@ -160,11 +160,11 @@ const languageStructureSchema = new Schema<LanguageStructureType>(
       type: String,
       enum: [
         "draft",
-        "published",
-        "archived",
+        "publish",
+        "archive",
         "pending_deletion",
       ],
-      default: "published",
+      default: "publish",
     },
 
     editRequest: {
@@ -199,7 +199,7 @@ const languageStructureSchema = new Schema<LanguageStructureType>(
 
         status: {
           type: String,
-          enum: ["draft", "published", "archived"],
+          enum: ["draft", "publish", "archive"],
         },
       },
 
@@ -222,7 +222,7 @@ const languageStructureSchema = new Schema<LanguageStructureType>(
 
       previousStatus: {
         type: String,
-        enum: ["draft", "published", "archived"],
+        enum: ["draft", "publish", "archive"],
       },
 
       requestNote: {

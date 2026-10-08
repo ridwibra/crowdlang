@@ -179,7 +179,7 @@ export default function MainLayout({
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Legal
           <div>
             <h3 className="mb-3 text-lg font-semibold text-gray-800 dark:text-gray-200">
               Legal
@@ -213,7 +213,7 @@ export default function MainLayout({
                 </Link>
               </li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Share */}
           <div>

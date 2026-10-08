@@ -244,6 +244,13 @@ export default async function LanguageDetailPage({
 
   const languagePath = `/${encodeURIComponent(language.name)}`;
 
+  const overviewSession = await getSession();
+  const overviewUser = overviewSession?.user?.email
+    ? await User.findOne({ email: overviewSession.user.email }).select("role")
+    : null;
+
+  const canViewOverview =
+    overviewUser?.role === "admin" || overviewUser?.role === "root";
   return (
     <main className="min-h-screen bg-slate-50 py-6 dark:bg-slate-950 sm:py-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -477,52 +484,61 @@ export default async function LanguageDetailPage({
                 )}
               </div>
             </section>
+            <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              {/* Section heading and creation form */}
+              <div className="border-b border-slate-200 p-6 dark:border-slate-800">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div
+                      aria-hidden="true"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-lg font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
+                    >
+                      ⇄
+                    </div>
 
-            <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex flex-col gap-5 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-lg font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
-                    ⇄
+                    <div className="min-w-0">
+                      <h2 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
+                        Language Structure
+                      </h2>
+
+                      <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                        Writing direction and sentence-order patterns
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
-                      Language Structure
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Writing direction and constituent-order patterns
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
                   <span
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-                      languageStructures.length === MAX_LANGUAGE_STRUCTURES
+                    className={`w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${
+                      languageStructures.length >= MAX_LANGUAGE_STRUCTURES
                         ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
                         : "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300"
                     }`}
                   >
                     {languageStructures.length} / {MAX_LANGUAGE_STRUCTURES}{" "}
-                    added
+                    records
                   </span>
+                </div>
 
-                  {isSignedIn && (
+                {/* Full-width creation form below the section heading */}
+                {isSignedIn && (
+                  <div className="mt-5 min-w-0 w-full">
                     <LanguageStructureFormToggle
                       language={language}
                       languageStructure={null}
                       disabled={!canAddLanguageStructure}
                       disabledMessage={`A language can have up to ${MAX_LANGUAGE_STRUCTURES} structures.`}
                     />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
-              <div className="p-6">
+              <div className="min-w-0 p-6">
                 {languageStructures.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-800/60">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl font-bold text-slate-400 shadow-sm dark:bg-slate-800">
+                    <div
+                      aria-hidden="true"
+                      className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl font-bold text-slate-400 shadow-sm dark:bg-slate-800"
+                    >
                       ⇄
                     </div>
 
@@ -530,8 +546,8 @@ export default async function LanguageDetailPage({
                       No language structure details available
                     </h3>
 
-                    <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
-                      Writing direction and constituent-order patterns have not
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">
+                      Writing directions and sentence-order patterns have not
                       been added for this language yet.
                     </p>
                   </div>
@@ -541,12 +557,13 @@ export default async function LanguageDetailPage({
                       (languageStructure, structureIndex) => (
                         <article
                           key={languageStructure._id}
-                          className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-800/40"
+                          className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-800/40"
                         >
-                          <div className="flex flex-col gap-4 border-b border-slate-200 bg-white p-5 sm:flex-row sm:items-start sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+                          {/* Structure heading, full-width edit form, and delete control */}
+                          <div className="flex min-w-0 flex-col gap-4 border-b border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-100 text-xs font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-100 text-xs font-bold text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">
                                   {structureIndex + 1}
                                 </span>
 
@@ -555,7 +572,7 @@ export default async function LanguageDetailPage({
                                 </p>
 
                                 <span
-                                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                                  className={`rounded-full px-2.5 py-1 text-xs font-bold capitalize ${
                                     languageStructure.status === "published"
                                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
                                       : languageStructure.status === "archived"
@@ -567,18 +584,17 @@ export default async function LanguageDetailPage({
                                 </span>
                               </div>
 
-                              <h3 className="mt-3 text-xl font-bold text-slate-950 dark:text-white">
+                              <h3 className="mt-3 break-words text-xl font-bold text-slate-950 dark:text-white">
                                 Structure {structureIndex + 1}
                               </h3>
 
-                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                Writing directions and constituent-order
-                                patterns.
+                              <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                Writing directions and sentence-order patterns.
                               </p>
                             </div>
 
                             {isSignedIn && (
-                              <div className="flex shrink-0 flex-wrap gap-3">
+                              <div className="flex min-w-0 w-full flex-col items-start gap-3">
                                 <LanguageStructureFormToggle
                                   language={language}
                                   languageStructure={languageStructure}
@@ -591,23 +607,23 @@ export default async function LanguageDetailPage({
                             )}
                           </div>
 
-                          <div className="space-y-6 p-5">
+                          <div className="min-w-0 space-y-6 p-5">
+                            {/* Writing directions */}
                             <div>
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0">
                                   <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300">
                                     Writing directions
                                   </h4>
 
-                                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                    All recorded directions used in this
-                                    structure.
+                                  <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                    The directions in which text is written.
                                   </p>
                                 </div>
 
-                                <span className="rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-bold text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
+                                <span className="shrink-0 rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-bold text-fuchsia-700 dark:bg-fuchsia-500/10 dark:text-fuchsia-300">
                                   {languageStructure.writingDirections.length}{" "}
-                                  added
+                                  recorded
                                 </span>
                               </div>
 
@@ -618,7 +634,7 @@ export default async function LanguageDetailPage({
                                     (writingDirection: string) => (
                                       <span
                                         key={writingDirection}
-                                        className="rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-2 text-sm font-semibold text-fuchsia-800 dark:border-fuchsia-500/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200"
+                                        className="max-w-full break-words rounded-xl border border-fuchsia-200 bg-fuchsia-50 px-3 py-2 text-sm font-semibold text-fuchsia-800 dark:border-fuchsia-500/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-200"
                                       >
                                         {writingDirection
                                           .split("-")
@@ -634,32 +650,25 @@ export default async function LanguageDetailPage({
                                 </div>
                               ) : (
                                 <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                                  No writing directions have been selected.
+                                  No writing direction has been recorded.
                                 </div>
                               )}
                             </div>
 
+                            {/* Sentence-order patterns */}
                             <div className="border-t border-slate-200 pt-6 dark:border-slate-800">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300">
-                                    Constituent-order patterns
-                                  </h4>
+                              <h4 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300">
+                                Sentence-order patterns
+                              </h4>
 
-                                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                    The order of selected grammatical
-                                    constituents.
-                                  </p>
-                                </div>
-
-                                {/* <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-bold text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300">
-                                  {languageStructure.wordOrders.length} /{" "}
-                                  {MAX_WORD_ORDERS}
-                                </span> */}
-                              </div>
+                              <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                Read the sentence parts in sequence. This
+                                describes grammatical order, not the direction
+                                of writing.
+                              </p>
 
                               {languageStructure.wordOrders.length > 0 ? (
-                                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                                <div className="mt-4 space-y-4">
                                   {languageStructure.wordOrders.map(
                                     (
                                       wordOrder: {
@@ -672,7 +681,7 @@ export default async function LanguageDetailPage({
                                     ) => (
                                       <article
                                         key={wordOrder._id}
-                                        className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-5 dark:border-cyan-500/20 dark:bg-cyan-500/5"
+                                        className="min-w-0 rounded-2xl border border-cyan-200 bg-cyan-50/60 p-5 dark:border-cyan-500/20 dark:bg-cyan-500/5"
                                       >
                                         <div className="flex items-start justify-between gap-4">
                                           <div className="min-w-0">
@@ -680,66 +689,75 @@ export default async function LanguageDetailPage({
                                               Pattern {wordOrderIndex + 1}
                                             </p>
 
-                                            <h5 className="mt-2 break-words text-lg font-bold text-slate-950 dark:text-white">
+                                            {/* <h5
+                                              dir="auto"
+                                              className="mt-2 break-words text-lg font-bold text-slate-950 dark:text-white"
+                                            >
                                               {wordOrder.label ||
-                                                `Constituent order ${
-                                                  wordOrderIndex + 1
-                                                }`}
-                                            </h5>
+                                                `Sentence order ${wordOrderIndex + 1}`}
+                                            </h5> */}
                                           </div>
 
-                                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-bold text-cyan-700 shadow-sm dark:bg-slate-900 dark:text-cyan-300">
-                                            {wordOrder.constituents.length}
+                                          <span className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-cyan-700 shadow-sm dark:bg-slate-900 dark:text-cyan-300">
+                                            {wordOrder.constituents.length}{" "}
+                                            {wordOrder.constituents.length === 1
+                                              ? "part"
+                                              : "parts"}
                                           </span>
                                         </div>
 
                                         {wordOrder.constituents.length > 0 ? (
-                                          <div className="mt-5 flex flex-wrap items-center gap-2">
+                                          <ol
+                                            dir="ltr"
+                                            className="mt-5 flex flex-wrap items-center gap-2"
+                                          >
                                             {wordOrder.constituents.map(
                                               (
                                                 constituent: string,
                                                 constituentIndex: number,
                                               ) => (
-                                                <div
+                                                <li
                                                   key={`${wordOrder._id}-${constituentIndex}`}
-                                                  className="flex items-center gap-2"
+                                                  className="max-w-full break-words rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm font-semibold text-cyan-800 dark:border-cyan-500/20 dark:bg-slate-900 dark:text-cyan-200"
                                                 >
-                                                  {constituentIndex > 0 && (
-                                                    <span
-                                                      aria-hidden="true"
-                                                      className="text-cyan-500 dark:text-cyan-400"
-                                                    >
-                                                      →
-                                                    </span>
-                                                  )}
-
-                                                  <span className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm font-bold text-cyan-800 dark:border-cyan-500/20 dark:bg-slate-900 dark:text-cyan-200">
-                                                    {constituent
-                                                      .split("-")
-                                                      .map(
-                                                        (part) =>
-                                                          part
-                                                            .charAt(0)
-                                                            .toUpperCase() +
-                                                          part.slice(1),
-                                                      )
-                                                      .join(" ")}
+                                                  <span className="mr-2 text-cyan-500 dark:text-cyan-400">
+                                                    {constituentIndex + 1}.
                                                   </span>
-                                                </div>
+
+                                                  {constituent
+                                                    .split("-")
+                                                    .map(
+                                                      (part) =>
+                                                        part
+                                                          .charAt(0)
+                                                          .toUpperCase() +
+                                                        part.slice(1),
+                                                    )
+                                                    .join(" ")}
+                                                </li>
                                               ),
                                             )}
-                                          </div>
+                                          </ol>
                                         ) : (
                                           <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                                            No constituents were added to this
+                                            No sentence parts were added to this
                                             pattern.
                                           </p>
                                         )}
 
                                         {wordOrder.notes && (
-                                          <p className="mt-5 border-t border-cyan-200 pt-4 text-sm leading-6 text-slate-600 dark:border-cyan-500/20 dark:text-slate-300">
-                                            {wordOrder.notes}
-                                          </p>
+                                          <div className="mt-5 border-t border-cyan-200 pt-4 dark:border-cyan-500/20">
+                                            <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+                                              Explanation or example
+                                            </p>
+
+                                            <p
+                                              dir="auto"
+                                              className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-slate-600 dark:text-slate-300"
+                                            >
+                                              {wordOrder.notes}
+                                            </p>
+                                          </div>
                                         )}
                                       </article>
                                     ),
@@ -747,7 +765,7 @@ export default async function LanguageDetailPage({
                                 </div>
                               ) : (
                                 <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                                  No constituent-order patterns have been added.
+                                  No sentence-order pattern has been recorded.
                                 </div>
                               )}
                             </div>
@@ -760,55 +778,55 @@ export default async function LanguageDetailPage({
 
                 {isSignedIn && !canAddLanguageStructure && (
                   <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/20 dark:bg-amber-500/10">
-                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    <p className="text-sm font-medium leading-6 text-amber-800 dark:text-amber-200">
                       This language has reached the maximum of{" "}
-                      {MAX_LANGUAGE_STRUCTURES} structures. Delete one before
-                      adding another.
+                      {MAX_LANGUAGE_STRUCTURES} structure records. Edit an
+                      existing record, or delete one you have permission to
+                      manage before adding another.
                     </p>
                   </div>
                 )}
               </div>
             </section>
-            <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              {/* Section header and search */}
-              <div className="border-b border-slate-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50/60 p-5 dark:border-slate-800 dark:from-violet-500/10 dark:via-slate-900 dark:to-indigo-500/5 sm:p-7">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div
-                      aria-hidden="true"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-2xl text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+            <section
+              aria-labelledby="essays-heading"
+              className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              {/* Header, creation form, and search */}
+              <div className="border-b border-slate-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50/50 p-5 dark:border-slate-800 dark:from-violet-500/10 dark:via-slate-900 dark:to-indigo-500/5 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-400">
+                      Language, culture &amp; stories
+                    </p>
+
+                    <h2
+                      id="essays-heading"
+                      className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl"
                     >
-                      ✦
-                    </div>
+                      Essays
+                    </h2>
 
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-600 dark:text-violet-400">
-                        Read and explore
-                      </p>
-
-                      <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-                        Essays
-                      </h2>
-
-                      <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Explore original writing, translations, and visual
-                        stories in {language.name}.
-                      </p>
-                    </div>
+                    <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+                      Discover original writing in{" "}
+                      <bdi className="font-medium">{language.name}</bdi>,
+                      alongside English translations, contributor perspectives,
+                      and images.
+                    </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="inline-flex rounded-full border border-violet-200 bg-white/80 px-3 py-1.5 text-xs font-bold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
-                      {essaySearchQuery
-                        ? `${essays.length} result${essays.length === 1 ? "" : "s"}`
-                        : `${essays.length} ${
-                            essays.length === 1 ? "essay" : "essays"
-                          }`}
-                    </span>
-                  </div>
+                  <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+                    {essays.length}{" "}
+                    {essaySearchQuery
+                      ? essays.length === 1
+                        ? "result"
+                        : "results"
+                      : essays.length === 1
+                        ? "essay"
+                        : "essays"}
+                  </span>
                 </div>
 
-                {/* Full-width area for the add form */}
                 {isSignedIn && (
                   <div className="mt-5 min-w-0">
                     <EssayFormToggle language={language} />
@@ -822,32 +840,26 @@ export default async function LanguageDetailPage({
                   aria-label="Search essays"
                   className="mt-6 flex flex-col gap-3 sm:flex-row"
                 >
-                  <div className="relative min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
                     <label htmlFor="essay-search" className="sr-only">
                       Search essays by title, text, translation, category,
                       level, or tags
                     </label>
 
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-violet-400"
-                    >
-                      ⌕
-                    </span>
-
                     <input
                       id="essay-search"
                       type="search"
                       name="q"
+                      dir="auto"
                       defaultValue={essaySearchQuery}
-                      placeholder="Search essays, translations, or tags..."
-                      className="min-h-12 w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500"
+                      placeholder="Search titles, stories, translations, or topics..."
+                      className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="inline-flex min-h-12 items-center justify-center rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                    className="inline-flex min-h-12 items-center justify-center rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                   >
                     Search essays
                   </button>
@@ -867,10 +879,10 @@ export default async function LanguageDetailPage({
                     role="status"
                     className="mt-3 break-words text-sm text-slate-600 dark:text-slate-400"
                   >
-                    Showing results for{" "}
-                    <span className="font-semibold text-violet-700 dark:text-violet-300">
+                    Search results for{" "}
+                    <bdi className="font-medium text-violet-700 dark:text-violet-300">
                       “{essaySearchQuery}”
-                    </span>
+                    </bdi>
                   </p>
                 )}
               </div>
@@ -878,24 +890,21 @@ export default async function LanguageDetailPage({
               {/* Essay list */}
               <div className="bg-slate-50/60 p-4 dark:bg-slate-950/20 sm:p-6">
                 {essays.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-violet-200 bg-white px-5 py-12 text-center dark:border-violet-500/20 dark:bg-slate-900 sm:px-8">
-                    <div
-                      aria-hidden="true"
-                      className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-3xl text-violet-500 dark:bg-violet-500/10 dark:text-violet-300"
-                    >
-                      {essaySearchQuery ? "⌕" : "✦"}
-                    </div>
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-14 text-center dark:border-slate-700 dark:bg-slate-900 sm:px-8">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600 dark:text-violet-400">
+                      {essaySearchQuery ? "Search results" : "The collection"}
+                    </p>
 
-                    <h3 className="mt-5 text-lg font-bold text-slate-900 dark:text-white">
+                    <h3 className="mt-3 text-xl font-bold text-slate-900 dark:text-white">
                       {essaySearchQuery
-                        ? "No matching essays found"
-                        : "Your reading space"}
+                        ? "No matching essays"
+                        : "Stories begin with a contribution"}
                     </h3>
 
-                    <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">
+                    <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-500 dark:text-slate-400">
                       {essaySearchQuery
-                        ? `No essays matched “${essaySearchQuery}”. Try another title, tag, category, or word from the original text or translation.`
-                        : `No essays have been added for ${language.name} yet. Original writing, translations, and accompanying images will appear here.`}
+                        ? "Try a different title, topic, category, or phrase from the original text or translation."
+                        : `No essays are available for ${language.name} yet. Original writing, translations, and accompanying images will appear here.`}
                     </p>
 
                     {essaySearchQuery && (
@@ -913,6 +922,9 @@ export default async function LanguageDetailPage({
                       const authorName =
                         essay.author?.name || "Unknown contributor";
 
+                      const essayImages = essay.images || [];
+                      const essayTags = essay.tags || [];
+
                       const updatedDate = essay.updatedAt
                         ? new Date(essay.updatedAt)
                         : null;
@@ -921,72 +933,68 @@ export default async function LanguageDetailPage({
                         updatedDate !== null &&
                         !Number.isNaN(updatedDate.getTime());
 
-                      const statusLabel = essay.status
-                        ? essay.status.replaceAll("_", " ")
-                        : "Status unavailable";
-
-                      const statusClasses =
-                        essay.status === "approved"
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                          : essay.status === "rejected"
-                            ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
-                            : essay.status === "archived"
-                              ? "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                              : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300";
-
                       return (
                         <article
                           key={essay._id}
                           aria-labelledby={`essay-title-${essay._id}`}
                           className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl"
                         >
-                          {/* Essay title, metadata, and author */}
-                          <header className="border-b border-slate-200 p-5 dark:border-slate-800 sm:p-7">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
+                          {/* Title and contributor */}
+                          <header className="p-5 sm:p-7">
+                            {(essay.category || essay.level) && (
+                              <div className="mb-4 flex flex-wrap items-center gap-2">
                                 {essay.category && (
-                                  <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+                                  <span
+                                    dir="auto"
+                                    className="max-w-full break-words rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300"
+                                  >
                                     {essay.category}
                                   </span>
                                 )}
 
                                 {essay.level && (
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                    Level: {essay.level}
+                                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                    {essay.level}
                                   </span>
                                 )}
-
-                                <span
-                                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold capitalize ${statusClasses}`}
-                                >
-                                  <span
-                                    aria-hidden="true"
-                                    className="h-1.5 w-1.5 rounded-full bg-current"
-                                  />
-                                  {statusLabel}
-                                </span>
                               </div>
+                            )}
 
-                              <h3
-                                id={`essay-title-${essay._id}`}
-                                className="mt-4 break-words text-2xl font-bold leading-tight tracking-tight text-slate-950 dark:text-white sm:text-3xl"
+                            <h3
+                              id={`essay-title-${essay._id}`}
+                              dir="auto"
+                              className="break-words text-start text-2xl font-bold leading-snug tracking-tight text-slate-950 dark:text-white sm:text-3xl"
+                            >
+                              {essay.title || "Untitled essay"}
+                            </h3>
+
+                            {essay.translationTitle && (
+                              <p
+                                lang="en"
+                                dir="ltr"
+                                className="mt-3 break-words text-base leading-7 text-slate-500 dark:text-slate-400 sm:text-lg"
                               >
-                                {essay.title || "Untitled essay"}
-                              </h3>
+                                {essay.translationTitle}
+                              </p>
+                            )}
 
-                              <div className="mt-5 flex items-center gap-3">
+                            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4">
+                              <div className="flex min-w-0 items-center gap-3">
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-violet-50 dark:border-slate-700 dark:bg-violet-500/10">
                                   {essay.author?.avatar ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img
                                       src={essay.author.avatar}
-                                      alt={`${authorName}'s profile picture`}
+                                      alt=""
                                       referrerPolicy="no-referrer"
                                       loading="lazy"
                                       className="h-full w-full object-cover"
                                     />
                                   ) : (
-                                    <span className="text-sm font-bold text-violet-700 dark:text-violet-300">
+                                    <span
+                                      aria-hidden="true"
+                                      className="text-sm font-bold text-violet-700 dark:text-violet-300"
+                                    >
                                       {authorName.charAt(0).toUpperCase()}
                                     </span>
                                   )}
@@ -994,20 +1002,23 @@ export default async function LanguageDetailPage({
 
                                 <div className="min-w-0">
                                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    Added by
+                                    Written by
                                   </p>
-
                                   <p className="mt-0.5 break-words text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                    {authorName}
+                                    <bdi>{authorName}</bdi>
                                   </p>
                                 </div>
                               </div>
+
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                <bdi>{language.name}</bdi> · English translation
+                              </span>
                             </div>
                           </header>
 
-                          {/* Full-width edit area, outside the header flex layout */}
+                          {/* Keep the editor outside narrow header wrappers */}
                           {isSignedIn && (
-                            <div className="min-w-0 border-b border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-800/20 sm:p-7">
+                            <div className="min-w-0 border-y border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-800/20 sm:p-7">
                               <EssayFormToggle
                                 language={language}
                                 essay={essay}
@@ -1015,74 +1026,72 @@ export default async function LanguageDetailPage({
                             </div>
                           )}
 
-                          {/* Original text and translation */}
-                          <div className="grid min-w-0 gap-5 p-5 sm:p-7 2xl:grid-cols-2">
+                          {/* Original and translation */}
+                          <div className="grid min-w-0 gap-8 p-5 sm:p-7 2xl:grid-cols-2 2xl:gap-10">
                             <section
                               aria-labelledby={`essay-original-${essay._id}`}
-                              className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+                              className="min-w-0"
                             >
-                              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60 sm:px-5">
+                              <div className="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
                                 <h4
                                   id={`essay-original-${essay._id}`}
-                                  className="text-xs font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300"
+                                  className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
                                 >
-                                  Original text
+                                  Original essay
                                 </h4>
 
-                                <span className="break-words text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                  {language.name}
+                                <span className="text-xs font-medium text-violet-700 dark:text-violet-300">
+                                  <bdi>{language.name}</bdi>
                                 </span>
                               </div>
 
-                              <div className="p-4 sm:p-5">
-                                {essay.body?.trim() ? (
-                                  <div
-                                    className="prose prose-slate max-w-none break-words text-sm leading-8 prose-headings:tracking-tight prose-p:my-4 prose-a:text-violet-600 prose-blockquote:border-violet-300 prose-img:rounded-xl prose-pre:overflow-x-auto dark:prose-invert dark:prose-a:text-violet-300 dark:prose-blockquote:border-violet-500/40 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto"
-                                    dangerouslySetInnerHTML={{
-                                      __html: essay.body,
-                                    }}
-                                  />
-                                ) : (
-                                  <p className="py-3 text-sm italic leading-7 text-slate-400 dark:text-slate-500">
-                                    No original text has been provided.
-                                  </p>
-                                )}
-                              </div>
+                              {essay.body?.trim() ? (
+                                <div
+                                  dir="auto"
+                                  className="prose prose-slate mx-auto max-w-[68ch] break-words text-start text-base leading-8 prose-headings:leading-snug prose-headings:tracking-tight prose-p:my-5 prose-a:break-words prose-a:text-violet-700 prose-blockquote:border-violet-300 prose-img:h-auto prose-img:max-w-full prose-img:rounded-xl prose-pre:overflow-x-auto dark:prose-invert dark:prose-a:text-violet-300 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto"
+                                  dangerouslySetInnerHTML={{
+                                    __html: essay.body,
+                                  }}
+                                />
+                              ) : (
+                                <p className="text-sm italic leading-7 text-slate-400 dark:text-slate-500">
+                                  No original text has been provided.
+                                </p>
+                              )}
                             </section>
 
                             <section
+                              lang="en"
+                              dir="ltr"
                               aria-labelledby={`essay-translation-${essay._id}`}
-                              className="min-w-0 overflow-hidden rounded-2xl border border-indigo-200 bg-indigo-50/30 dark:border-indigo-500/20 dark:bg-indigo-500/5"
+                              className="min-w-0 rounded-2xl bg-indigo-50/50 p-4 dark:bg-indigo-500/5 sm:p-5"
                             >
-                              <div className="border-b border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-500/20 dark:bg-indigo-500/10 sm:px-5">
+                              <div className="mb-5 border-b border-indigo-200/70 pb-3 dark:border-indigo-500/20">
                                 <h4
                                   id={`essay-translation-${essay._id}`}
-                                  className="break-words text-xs font-bold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300"
+                                  className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300"
                                 >
-                                  {essay.translationTitle ||
-                                    "English translation"}
+                                  English translation
                                 </h4>
                               </div>
 
-                              <div className="p-4 sm:p-5">
-                                {essay.translationBody?.trim() ? (
-                                  <div
-                                    className="prose prose-slate max-w-none break-words text-sm leading-8 prose-headings:tracking-tight prose-p:my-4 prose-a:text-indigo-600 prose-blockquote:border-indigo-300 prose-img:rounded-xl prose-pre:overflow-x-auto dark:prose-invert dark:prose-a:text-indigo-300 dark:prose-blockquote:border-indigo-500/40 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto"
-                                    dangerouslySetInnerHTML={{
-                                      __html: essay.translationBody,
-                                    }}
-                                  />
-                                ) : (
-                                  <p className="py-3 text-sm italic leading-7 text-slate-500 dark:text-slate-400">
-                                    A translation has not been added yet.
-                                  </p>
-                                )}
-                              </div>
+                              {essay.translationBody?.trim() ? (
+                                <div
+                                  className="prose prose-slate mx-auto max-w-[68ch] break-words text-base leading-8 prose-headings:leading-snug prose-headings:tracking-tight prose-p:my-5 prose-a:break-words prose-a:text-indigo-700 prose-blockquote:border-indigo-300 prose-img:h-auto prose-img:max-w-full prose-img:rounded-xl prose-pre:overflow-x-auto dark:prose-invert dark:prose-a:text-indigo-300 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto"
+                                  dangerouslySetInnerHTML={{
+                                    __html: essay.translationBody,
+                                  }}
+                                />
+                              ) : (
+                                <p className="text-sm italic leading-7 text-slate-500 dark:text-slate-400">
+                                  An English translation has not been added yet.
+                                </p>
+                              )}
                             </section>
                           </div>
 
-                          {/* Accompanying images */}
-                          {essay.images.length > 0 && (
+                          {/* Images */}
+                          {essayImages.length > 0 && (
                             <section
                               aria-labelledby={`essay-images-${essay._id}`}
                               className="border-t border-slate-100 px-5 py-6 dark:border-slate-800 sm:px-7"
@@ -1090,21 +1099,21 @@ export default async function LanguageDetailPage({
                               <div className="mb-4 flex items-center justify-between gap-3">
                                 <h4
                                   id={`essay-images-${essay._id}`}
-                                  className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
+                                  className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
                                 >
-                                  Accompanying images
+                                  In pictures
                                 </h4>
 
-                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                                  {essay.images.length}{" "}
-                                  {essay.images.length === 1
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                  {essayImages.length}{" "}
+                                  {essayImages.length === 1
                                     ? "image"
                                     : "images"}
                                 </span>
                               </div>
 
                               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                {essay.images.map(
+                                {essayImages.map(
                                   (
                                     image: {
                                       image_url: string;
@@ -1112,21 +1121,23 @@ export default async function LanguageDetailPage({
                                     },
                                     imageIndex: number,
                                   ) => (
-                                    <a
+                                    <figure
                                       key={`${
                                         image.public_id || image.image_url
                                       }-${imageIndex}`}
-                                      href={image.image_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      aria-label={`Open image ${
-                                        imageIndex + 1
-                                      } for ${
-                                        essay.title || "this essay"
-                                      } in a new tab`}
-                                      className="group block min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:focus:ring-offset-slate-900"
+                                      className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
                                     >
-                                      <div className="flex h-56 items-center justify-center overflow-hidden p-3 sm:h-64">
+                                      <a
+                                        href={image.image_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={`Open image ${
+                                          imageIndex + 1
+                                        } for ${
+                                          essay.title || "this essay"
+                                        } in a new tab`}
+                                        className="group flex h-56 items-center justify-center overflow-hidden p-3 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500 sm:h-64"
+                                      >
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                           src={image.image_url}
@@ -1137,50 +1148,42 @@ export default async function LanguageDetailPage({
                                           decoding="async"
                                           className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.02]"
                                         />
-                                      </div>
+                                      </a>
 
-                                      <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 text-xs dark:border-slate-700 dark:bg-slate-900">
-                                        <span className="font-medium text-slate-500 dark:text-slate-400">
-                                          Image {imageIndex + 1}
-                                        </span>
-
-                                        <span className="font-semibold text-violet-600 dark:text-violet-300">
-                                          View full image{" "}
-                                          <span aria-hidden="true">↗</span>
-                                        </span>
-                                      </div>
-                                    </a>
+                                      <figcaption className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                                        <span>Image {imageIndex + 1}</span>
+                                        <span>Open image in a new tab ↗</span>
+                                      </figcaption>
+                                    </figure>
                                   ),
                                 )}
                               </div>
                             </section>
                           )}
 
-                          {/* Tags */}
-                          {essay.tags.length > 0 && (
+                          {/* Topics */}
+                          {essayTags.length > 0 && (
                             <section
                               aria-labelledby={`essay-tags-${essay._id}`}
                               className="border-t border-slate-100 px-5 py-5 dark:border-slate-800 sm:px-7"
                             >
                               <h4
                                 id={`essay-tags-${essay._id}`}
-                                className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
+                                className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
                               >
-                                Topics
+                                Explore related topics
                               </h4>
 
                               <div className="flex flex-wrap gap-2">
-                                {essay.tags.map(
+                                {essayTags.map(
                                   (tag: string, tagIndex: number) => (
                                     <Link
                                       key={`${tag}-${tagIndex}`}
-                                      href={`${languagePath}?q=${encodeURIComponent(
-                                        tag,
-                                      )}`}
+                                      href={`${languagePath}?q=${encodeURIComponent(tag)}`}
                                       aria-label={`Search essays for ${tag}`}
-                                      className="max-w-full break-words rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:border-violet-500/15 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:bg-violet-500/20 dark:focus:ring-offset-slate-900"
+                                      className="max-w-full break-words rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-xs font-medium text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 dark:border-violet-500/15 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:bg-violet-500/20 dark:focus:ring-offset-slate-900"
                                     >
-                                      #{tag}
+                                      <bdi>#{tag}</bdi>
                                     </Link>
                                   ),
                                 )}
@@ -1188,12 +1191,12 @@ export default async function LanguageDetailPage({
                             </section>
                           )}
 
-                          {/* Update date and delete control */}
+                          {/* Date and delete */}
                           <footer className="flex flex-col gap-4 border-t border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/30 sm:flex-row sm:items-center sm:justify-between sm:px-7">
                             <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
                               {hasValidUpdatedDate && updatedDate ? (
                                 <>
-                                  Last updated{" "}
+                                  Updated{" "}
                                   <time
                                     dateTime={updatedDate.toISOString()}
                                     className="font-medium text-slate-600 dark:text-slate-300"
@@ -1207,7 +1210,7 @@ export default async function LanguageDetailPage({
                                   </time>
                                 </>
                               ) : (
-                                "No update date available"
+                                "Update date unavailable"
                               )}
                             </p>
 
@@ -1225,59 +1228,138 @@ export default async function LanguageDetailPage({
               </div>
             </section>
           </div>
+          {canViewOverview && (
+            <aside
+              aria-labelledby="language-overview-heading"
+              className="min-w-0 h-fit overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:sticky xl:top-6"
+            >
+              {/* Overview header */}
+              <div className="border-b border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50/50 p-5 dark:border-slate-800 dark:from-indigo-500/10 dark:via-slate-900 dark:to-violet-500/5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-400">
+                    Administration
+                  </p>
 
-          <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:sticky xl:top-6">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-              Overview
-            </p>
-
-            <dl className="mt-5 space-y-5">
-              <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-slate-800">
-                <dt className="text-sm text-slate-500 dark:text-slate-400">
-                  Countries
-                </dt>
-
-                <dd className="text-lg font-bold text-slate-900 dark:text-white">
-                  {language.countries.length}
-                </dd>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5 dark:border-slate-800">
-                <dt className="text-sm text-slate-500 dark:text-slate-400">
-                  Alphabets
-                </dt>
-
-                <dd>
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                    {alphabets.length} / {MAX_ALPHABETS}
+                  <span className="rounded-full border border-indigo-200 bg-white/80 px-2.5 py-1 text-xs font-semibold capitalize text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300">
+                    {overviewUser?.role}
                   </span>
-                </dd>
-              </div>
+                </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-sm text-slate-500 dark:text-slate-400">
-                  {essaySearchQuery ? "Search results" : "Essays"}
-                </dt>
+                <h2
+                  id="language-overview-heading"
+                  className="mt-3 text-xl font-bold tracking-tight text-slate-950 dark:text-white"
+                >
+                  Language overview
+                </h2>
 
-                <dd className="text-lg font-bold text-slate-900 dark:text-white">
-                  {essays.length}
-                </dd>
-              </div>
-            </dl>
-
-            {isStaff && (
-              <div className="mt-7 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
-                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
-                  Staff controls enabled
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-300">
-                  You can add, edit, and remove alphabets and essays from this
-                  page.
+                <p className="mt-2 break-words text-sm leading-6 text-slate-600 dark:text-slate-400">
+                  Coverage and content for{" "}
+                  <bdi className="font-medium text-slate-800 dark:text-slate-200">
+                    {language.name}
+                  </bdi>
+                  .
                 </p>
               </div>
-            )}
-          </aside>
+
+              <div className="p-5 sm:p-6">
+                {/* Available counts */}
+                <dl className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <div className="flex items-start justify-between gap-4 pb-5">
+                    <dt>
+                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        Countries
+                      </span>
+
+                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        Listed geographical coverage
+                      </span>
+                    </dt>
+
+                    <dd className="shrink-0 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
+                      {language.countries.length}
+                    </dd>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4 py-5">
+                    <dt>
+                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        Alphabets
+                      </span>
+
+                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        Records / maximum allowed
+                      </span>
+                    </dt>
+
+                    <dd className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold tabular-nums text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      {alphabets.length} / {MAX_ALPHABETS}
+                    </dd>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4 pt-5">
+                    <dt>
+                      <span className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {essaySearchQuery ? "Matching essays" : "Essays shown"}
+                      </span>
+
+                      <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {essaySearchQuery
+                          ? "Results for the current search"
+                          : "Essays in the current collection"}
+                      </span>
+                    </dt>
+
+                    <dd className="shrink-0 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
+                      {essays.length}
+                    </dd>
+                  </div>
+                </dl>
+
+                {/* All content areas */}
+                <section
+                  aria-labelledby="overview-content-heading"
+                  className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800"
+                >
+                  <h3
+                    id="overview-content-heading"
+                    className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400"
+                  >
+                    Content areas
+                  </h3>
+
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      "Table entries",
+                      "Alphabets",
+                      "Syntax & word order",
+                      "Essays & translations",
+                    ].map((label) => (
+                      <li
+                        key={label}
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      >
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                {/* Administrative permissions */}
+                <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+                  <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
+                    Administrative access
+                  </p>
+
+                  <p className="mt-2 text-xs leading-6 text-indigo-800 dark:text-indigo-300">
+                    Your role permits editing and deleting content regardless of
+                    its author or creator. Use the available controls to manage
+                    table entries, alphabets, language structures, essays, and
+                    reels.
+                  </p>
+                </div>
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </main>

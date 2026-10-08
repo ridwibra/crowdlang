@@ -1,3 +1,4 @@
+// app/(main)/[url]/addtable/page.tsx
 import { redirect } from "next/navigation";
 import ToggleFields from "@/components/ToggleFields";
 import db from "@/utils/db";
@@ -9,6 +10,8 @@ import User from "@/models/User";
 interface PageProps {
   params: Promise<{ url: string }>;
 }
+
+const TEXT_TYPES = ["word", "sentence", "expression", "paragraph"];
 
 export default async function AddTablePage({ params }: PageProps) {
   const { url } = await params;
@@ -24,7 +27,10 @@ export default async function AddTablePage({ params }: PageProps) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center bg-slate-50 px-4 py-12 dark:bg-slate-950">
         <div className="w-full max-w-md rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm dark:border-red-900/60 dark:bg-red-950/30">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-2xl font-bold text-red-600 dark:bg-red-900/50 dark:text-red-300">
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-2xl font-bold text-red-600 dark:bg-red-900/50 dark:text-red-300"
+          >
             !
           </div>
 
@@ -40,38 +46,78 @@ export default async function AddTablePage({ params }: PageProps) {
     );
   }
 
+  const languageId = language._id.toString();
+  const resolvedLanguageName = language.name;
+
+  const languages = [
+    {
+      _id: languageId,
+      name: resolvedLanguageName,
+    },
+  ];
+
   async function handleSubmit(formData: FormData) {
     "use server";
 
-    const text = formData.get("text") as string;
-    const translation = formData.get("translation") as string;
-    const textType = formData.get("textType") as string;
+    const session = await getSession();
+
+    if (!session?.user?.email) {
+      throw new Error("Please sign in to add a table entry.");
+    }
+
+    const rawText = formData.get("text");
+    const rawTranslation = formData.get("translation");
+    const rawTextType = formData.get("textType");
+    const selectedLanguageId = formData.get("languageId");
+
+    const text = typeof rawText === "string" ? rawText.trim() : "";
+
+    const translation =
+      typeof rawTranslation === "string" ? rawTranslation.trim() : "";
+
+    const textType = typeof rawTextType === "string" ? rawTextType : "";
+
+    if (!text || !translation) {
+      throw new Error(
+        "Both the language text and English translation are required.",
+      );
+    }
+
+    if (!TEXT_TYPES.includes(textType)) {
+      throw new Error("Please select a valid text type.");
+    }
+
+    // This page must save only to the language identified by its URL.
+    if (selectedLanguageId !== languageId) {
+      throw new Error("Please select this page's language.");
+    }
 
     await db.connect();
 
-    const session = await getSession();
-
-    if (!session) {
-      throw new Error("Unauthorized");
-    }
-
     const mongoUser = await User.findOne({
       email: session.user.email,
-    });
+    }).select("_id");
 
     if (!mongoUser) {
-      throw new Error("User not found in database");
+      throw new Error("User not found in database.");
+    }
+
+    const currentLanguage =
+      await Language.findById(languageId).select("_id name");
+
+    if (!currentLanguage) {
+      throw new Error("This language no longer exists.");
     }
 
     await Table.create({
       text,
       translation,
-      language: [language._id],
+      language: currentLanguage._id,
       textType,
       createdBy: mongoUser._id,
     });
 
-    redirect(`/${encodeURIComponent(language.name)}`);
+    redirect(`/${encodeURIComponent(currentLanguage.name)}`);
   }
 
   return (
@@ -81,7 +127,10 @@ export default async function AddTablePage({ params }: PageProps) {
           {/* Header */}
           <div className="border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-violet-50 to-fuchsia-50 px-6 py-7 dark:border-indigo-500/15 dark:from-indigo-500/10 dark:via-violet-500/10 dark:to-fuchsia-500/10 sm:px-8">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-xl font-bold text-white shadow-sm">
+              <div
+                aria-hidden="true"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-xl font-bold text-white shadow-sm"
+              >
                 +
               </div>
 
@@ -95,10 +144,10 @@ export default async function AddTablePage({ params }: PageProps) {
                 </h1>
 
                 <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Add a word, phrase, translation, or other learning entry for{" "}
-                  <span className="font-semibold text-slate-800 dark:text-slate-100">
-                    {language.name}
-                  </span>
+                  Add a word, sentence, expression, or paragraph for{" "}
+                  <bdi className="font-semibold text-slate-800 dark:text-slate-100">
+                    {resolvedLanguageName}
+                  </bdi>
                   .
                 </p>
               </div>
@@ -117,21 +166,21 @@ export default async function AddTablePage({ params }: PageProps) {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Complete the fields below, then save the entry to add it to the{" "}
-                {language.name} language table.
+                Select <bdi>{resolvedLanguageName}</bdi>, complete the fields,
+                then save the entry to its language table.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/30 sm:p-5">
-              <ToggleFields languageName={language.name} />
-            </div>
+            <ToggleFields languages={languages} />
 
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end dark:border-slate-800">
               <button
                 type="submit"
                 className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 sm:w-auto"
               >
-                <span className="mr-2 text-lg leading-none">+</span>
+                <span aria-hidden="true" className="mr-2 text-lg leading-none">
+                  +
+                </span>
                 Save entry
               </button>
             </div>
@@ -140,7 +189,7 @@ export default async function AddTablePage({ params }: PageProps) {
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
           <p className="font-semibold text-slate-700 dark:text-slate-200">
-            Adding to: {language.name}
+            Adding to: <bdi>{resolvedLanguageName}</bdi>
           </p>
 
           <p className="mt-1 leading-5">

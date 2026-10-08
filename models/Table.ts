@@ -1,4 +1,4 @@
-// models/Language.ts
+// models/Table.ts
 import {TableType } from "@/utils/types";
 import mongoose, { Schema } from "mongoose";
 

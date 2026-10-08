@@ -1,6 +1,6 @@
-// app/api/language-structure/[id]/route.ts
-
+// app/api/structure/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { Types } from "mongoose";
 import db from "@/utils/db";
 import LanguageStructure, {
   CONSTITUENT_TYPES,
@@ -11,10 +11,22 @@ import LanguageStructure, {
 import User from "@/models/User";
 import Language from "@/models/Language";
 import { getSession } from "@/lib/server";
-import { UserType } from "@/utils/types";
+
+const MAX_STRUCTURES_PER_LANGUAGE = 5;
+
+const STRUCTURE_STATUSES = [
+  "draft",
+  "publish",
+ 
+] as const;
 
 const writingDirectionSet = new Set<string>(WRITING_DIRECTIONS);
 const constituentSet = new Set<string>(CONSTITUENT_TYPES);
+const structureStatusSet = new Set<string>(STRUCTURE_STATUSES);
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
 type SanitizedWordOrder = {
   label: string;
@@ -22,8 +34,26 @@ type SanitizedWordOrder = {
   notes: string;
 };
 
-function sanitizeStringArray(value: unknown) {
-  if (!Array.isArray(value)) return [];
+const hasStructureManagementPermission = (
+  currentUserId: Types.ObjectId,
+  currentUserRole: string,
+  createdBy: Types.ObjectId | string | null | undefined,
+): boolean => {
+  if (currentUserRole === "admin" || currentUserRole === "root") {
+    return true;
+  }
+
+  if (createdBy === null || createdBy === undefined) {
+    return false;
+  }
+
+  return currentUserId.toString() === createdBy.toString();
+};
+
+function sanitizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
 
   return [
     ...new Set(
@@ -36,7 +66,9 @@ function sanitizeStringArray(value: unknown) {
 }
 
 function sanitizeWordOrders(value: unknown): SanitizedWordOrder[] {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) {
+    return [];
+  }
 
   return value.map((item) => {
     const pattern =
@@ -68,7 +100,12 @@ function sanitizeWordOrders(value: unknown): SanitizedWordOrder[] {
 function getValidationMessage(
   writingDirections: string[],
   wordOrders: SanitizedWordOrder[],
-) {
+  status: string,
+): string | null {
+  if (!structureStatusSet.has(status)) {
+    return "Structure status is invalid.";
+  }
+
   const invalidWritingDirection = writingDirections.find(
     (direction) => !writingDirectionSet.has(direction),
   );
@@ -78,7 +115,7 @@ function getValidationMessage(
   }
 
   if (wordOrders.length > MAX_WORD_ORDERS_PER_LANGUAGE) {
-    return `A language can have a maximum of ${MAX_WORD_ORDERS_PER_LANGUAGE} word-order patterns.`;
+    return `A structure can have a maximum of ${MAX_WORD_ORDERS_PER_LANGUAGE} word-order patterns.`;
   }
 
   for (const wordOrder of wordOrders) {
@@ -87,8 +124,7 @@ function getValidationMessage(
     }
 
     if (
-      wordOrder.constituents.length >
-      MAX_CONSTITUENTS_PER_WORD_ORDER
+      wordOrder.constituents.length > MAX_CONSTITUENTS_PER_WORD_ORDER
     ) {
       return `Each word-order pattern can contain a maximum of ${MAX_CONSTITUENTS_PER_WORD_ORDER} constituents.`;
     }
@@ -105,13 +141,28 @@ function getValidationMessage(
   return null;
 }
 
+function getErrorMessage(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error) {
+    return error.message || fallbackMessage;
+  }
+
+  return fallbackMessage;
+}
+
 export async function GET(
   _request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: RouteContext,
 ) {
-  const { id } = await context.params;
-
   try {
+    const { id } = await context.params;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { message: "Invalid language structure ID." },
+        { status: 400 },
+      );
+    }
+
     await db.connect();
 
     const languageStructure = await LanguageStructure.findById(id)
@@ -134,258 +185,291 @@ export async function GET(
 
     if (!languageStructure) {
       return NextResponse.json(
-        {
-          message: "Language structure details not found.",
-        },
-        {
-          status: 404,
-        },
+        { message: "Language structure details not found." },
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
-      {
-        languageStructure,
-      },
-      {
-        status: 200,
-      },
+      { languageStructure },
+      { status: 200 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Language structure GET by ID error:", error);
 
     return NextResponse.json(
       {
-        message:
-          error.message ||
-          "Something went wrong. Please try again.",
+        message: getErrorMessage(
+          error,
+          "Failed to fetch language structure details.",
+        ),
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: RouteContext,
 ) {
-  const { id } = await context.params;
-
   try {
-    await db.connect();
-
     const session = await getSession();
 
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        {
-          message: "You must be signed in to continue.",
-        },
-        {
-          status: 401,
-        },
+        { message: "Please sign in to edit language structure details." },
+        { status: 401 },
       );
     }
 
-    const user = session.user as typeof session.user & UserType;
-    const body = await request.json();
+    const { id } = await context.params;
+
+    if (!Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { message: "Invalid language structure ID." },
+        { status: 400 },
+      );
+    }
+
+    await db.connect();
+
+    const mongoUser = await User.findOne({
+      email: session.user.email,
+    }).select("_id role");
+
+    if (!mongoUser) {
+      return NextResponse.json(
+        { message: "User not found in database." },
+        { status: 404 },
+      );
+    }
+
+    const languageStructure = await LanguageStructure.findById(id);
+
+    if (!languageStructure) {
+      return NextResponse.json(
+        { message: "Language structure details not found." },
+        { status: 404 },
+      );
+    }
+
+    const canEdit = hasStructureManagementPermission(
+      mongoUser._id,
+      mongoUser.role,
+      languageStructure.createdBy,
+    );
+
+    if (!canEdit) {
+      return NextResponse.json(
+        {
+          message:
+            "Only this language structure's creator, an admin, or root can edit it.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const body = await request.json().catch(() => null);
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { message: "A valid request body is required." },
+        { status: 400 },
+      );
+    }
 
     const language =
       typeof body.language === "string" ? body.language.trim() : "";
 
-    const writingDirections = sanitizeStringArray(
-      body.writingDirections,
-    );
-
+    const writingDirections = sanitizeStringArray(body.writingDirections);
     const wordOrders = sanitizeWordOrders(body.wordOrders);
 
-    if (!language) {
+    const status =
+      typeof body.status === "string" && body.status.trim()
+        ? body.status.trim()
+        : languageStructure.status;
+
+    if (!language || !Types.ObjectId.isValid(language)) {
       return NextResponse.json(
-        {
-          message: "Language is required.",
-        },
-        {
-          status: 400,
-        },
+        { message: "A valid language is required." },
+        { status: 400 },
       );
     }
 
     const validationMessage = getValidationMessage(
       writingDirections,
       wordOrders,
+      status,
     );
 
     if (validationMessage) {
       return NextResponse.json(
-        {
-          message: validationMessage,
-        },
-        {
-          status: 400,
-        },
+        { message: validationMessage },
+        { status: 400 },
       );
     }
 
-    const mongoUser = await User.findOne({
-      email: user.email,
-    });
-
-    if (!mongoUser) {
-      return NextResponse.json(
-        {
-          message: "User not found.",
-        },
-        {
-          status: 404,
-        },
-      );
-    }
-
-    const languageStructure =
-      await LanguageStructure.findById(id);
-
-    if (!languageStructure) {
-      return NextResponse.json(
-        {
-          message: "Language structure details not found.",
-        },
-        {
-          status: 404,
-        },
-      );
-    }
-
-    const languageDoc = await Language.findById(language).select(
-      "_id name",
-    );
+    const languageDoc = await Language.findById(language).select("_id name");
 
     if (!languageDoc) {
       return NextResponse.json(
-        {
-          message: "Language not found.",
-        },
-        {
-          status: 404,
-        },
+        { message: "Language not found." },
+        { status: 404 },
       );
     }
 
+    // Moving this record to another language must not exceed that language's limit.
+    if (
+      languageStructure.language.toString() !== languageDoc._id.toString()
+    ) {
+      const destinationCount = await LanguageStructure.countDocuments({
+        language: languageDoc._id,
+        _id: { $ne: languageStructure._id },
+      });
+
+      if (destinationCount >= MAX_STRUCTURES_PER_LANGUAGE) {
+        return NextResponse.json(
+          {
+            message:
+              `A language can have a maximum of ${MAX_STRUCTURES_PER_LANGUAGE} structure records.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
 
     languageStructure.language = languageDoc._id;
     languageStructure.writingDirections = writingDirections;
     languageStructure.wordOrders = wordOrders;
+    languageStructure.status = status;
     languageStructure.lastUpdatedBy = mongoUser._id;
 
-    if (body.status !== undefined) {
-      languageStructure.status = body.status;
-    }
-
+    // Do not modify createdBy; it is the ownership field.
     await languageStructure.save();
 
-    const updatedLanguageStructure =
-      await LanguageStructure.findById(
-        languageStructure._id,
-      )
-        .populate({
-          path: "createdBy",
-          select: "name email",
-          model: User,
-        })
-        .populate({
-          path: "lastUpdatedBy",
-          select: "name email",
-          model: User,
-        })
-        .populate({
-          path: "language",
-          select: "name",
-          model: Language,
-        })
-        .lean();
+    const updatedLanguageStructure = await LanguageStructure.findById(
+      languageStructure._id,
+    )
+      .populate({
+        path: "createdBy",
+        select: "name email",
+        model: User,
+      })
+      .populate({
+        path: "lastUpdatedBy",
+        select: "name email",
+        model: User,
+      })
+      .populate({
+        path: "language",
+        select: "name",
+        model: Language,
+      })
+      .lean();
 
     return NextResponse.json(
       {
-        message: "Language structure details updated.",
+        message: "Language structure details updated successfully.",
         languageStructure: updatedLanguageStructure,
       },
-      {
-        status: 200,
-      },
+      { status: 200 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Language structure PUT error:", error);
 
     return NextResponse.json(
       {
-        message:
-          error.message ||
-          "Something went wrong. Please try again.",
+        message: getErrorMessage(
+          error,
+          "Failed to update language structure details.",
+        ),
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   _request: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: RouteContext,
 ) {
-  const { id } = await context.params;
-
   try {
-    await db.connect();
-
     const session = await getSession();
 
-    if (!session) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        {
-          message: "You must be signed in to continue.",
-        },
-        {
-          status: 401,
-        },
+        { message: "Please sign in to delete language structure details." },
+        { status: 401 },
       );
     }
 
-    const deletedLanguageStructure =
-      await LanguageStructure.findByIdAndDelete(id);
+    const { id } = await context.params;
 
-    if (!deletedLanguageStructure) {
+    if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        {
-          message: "Language structure details not found.",
-        },
-        {
-          status: 404,
-        },
+        { message: "Invalid language structure ID." },
+        { status: 400 },
       );
     }
+
+    await db.connect();
+
+    const mongoUser = await User.findOne({
+      email: session.user.email,
+    }).select("_id role");
+
+    if (!mongoUser) {
+      return NextResponse.json(
+        { message: "User not found in database." },
+        { status: 404 },
+      );
+    }
+
+    const languageStructure = await LanguageStructure.findById(id).select(
+      "createdBy",
+    );
+
+    if (!languageStructure) {
+      return NextResponse.json(
+        { message: "Language structure details not found." },
+        { status: 404 },
+      );
+    }
+
+    const canDelete = hasStructureManagementPermission(
+      mongoUser._id,
+      mongoUser.role,
+      languageStructure.createdBy,
+    );
+
+    if (!canDelete) {
+      return NextResponse.json(
+        {
+          message:
+            "Only this language structure's creator, an admin, or root can delete it.",
+        },
+        { status: 403 },
+      );
+    }
+
+    await LanguageStructure.findByIdAndDelete(id);
 
     return NextResponse.json(
-      {
-        message: "Language structure details deleted.",
-      },
-      {
-        status: 200,
-      },
+      { message: "Language structure details deleted successfully." },
+      { status: 200 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Language structure DELETE error:", error);
 
     return NextResponse.json(
       {
-        message:
-          error.message ||
-          "Something went wrong. Please try again.",
+        message: getErrorMessage(
+          error,
+          "Failed to delete language structure details.",
+        ),
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }

@@ -1,7 +1,14 @@
 "use client";
 
 import { deleteMedia, uploadMedia } from "@/utils/files/requests";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { toast } from "sonner";
 
 type LanguageOption = {
@@ -46,6 +53,7 @@ const AUDIO_MIME_TYPES = [
   "audio/wave",
   "audio/mp4",
   "audio/m4a",
+  "audio/x-m4a",
   "audio/aac",
   "audio/ogg",
   "audio/webm",
@@ -53,46 +61,93 @@ const AUDIO_MIME_TYPES = [
 ];
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "ogv", "avi"];
-
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "ogg", "oga", "flac"];
 
 const MAX_VIDEO_SIZE = 200 * 1024 * 1024;
 const MAX_AUDIO_SIZE = 20 * 1024 * 1024;
-
 const MAX_VIDEO_DURATION = 5 * 60;
 const MAX_AUDIO_DURATION = 10 * 60;
 
-function getFileExtension(fileName: string) {
-  const parts = fileName.toLowerCase().split(".");
-
-  return parts.length > 1 ? parts[parts.length - 1] : "";
-}
-
 function getMediaType(file: File): ReelMediaType | null {
-  const mimeType = file.type.toLowerCase();
-  const extension = getFileExtension(file.name);
+  const mime = file.type.toLowerCase();
+  const extension = file.name.toLowerCase().split(".").pop() || "";
 
-  if (
-    VIDEO_MIME_TYPES.includes(mimeType) ||
-    VIDEO_EXTENSIONS.includes(extension)
-  ) {
-    return "video";
-  }
-
-  if (
-    AUDIO_MIME_TYPES.includes(mimeType) ||
-    AUDIO_EXTENSIONS.includes(extension)
-  ) {
-    return "audio";
-  }
+  if (VIDEO_MIME_TYPES.includes(mime)) return "video";
+  if (AUDIO_MIME_TYPES.includes(mime)) return "audio";
+  if (VIDEO_EXTENSIONS.includes(extension)) return "video";
+  if (AUDIO_EXTENSIONS.includes(extension)) return "audio";
 
   return null;
 }
 
 function formatFileSize(bytes: number) {
-  const megabytes = bytes / (1024 * 1024);
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`;
+}
 
-  return `${megabytes.toFixed(megabytes >= 10 ? 0 : 1)} MB`;
+function validateMediaDuration(
+  type: ReelMediaType,
+  objectUrl: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const element = document.createElement(type);
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+
+      clearTimeout(timeout);
+      element.onloadedmetadata = null;
+      element.onerror = null;
+      element.removeAttribute("src");
+      element.load();
+
+      if (error) reject(error);
+      else resolve();
+    };
+
+    timeout = setTimeout(
+      () =>
+        finish(new Error("Checking the file took too long. Try another file.")),
+      15_000,
+    );
+
+    element.onloadedmetadata = () => {
+      const duration = element.duration;
+
+      if (!Number.isFinite(duration) || duration <= 0) {
+        finish(new Error("Unable to read the selected file duration."));
+        return;
+      }
+
+      const maximum =
+        type === "audio" ? MAX_AUDIO_DURATION : MAX_VIDEO_DURATION;
+
+      if (duration > maximum) {
+        finish(
+          new Error(
+            type === "audio"
+              ? "Audio cannot be longer than 10 minutes."
+              : "Video cannot be longer than 5 minutes.",
+          ),
+        );
+        return;
+      }
+
+      finish();
+    };
+
+    element.onerror = () => {
+      finish(
+        new Error("Unable to read this file. Please choose another file."),
+      );
+    };
+
+    element.preload = "metadata";
+    element.src = objectUrl;
+  });
 }
 
 export default function EditReelForm({
@@ -108,15 +163,21 @@ export default function EditReelForm({
   onCancel,
   onSaved,
 }: EditReelFormProps) {
+  const formId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const operationRef = useRef(false);
+  const mountedRef = useRef(true);
+  const savedRef = useRef(false);
+  const uncertainRef = useRef(false);
 
-  const [caption, setCaption] = useState(initialCaption);
-  const [tagsText, setTagsText] = useState(initialTags.join(", "));
-  const [transcription, setTranscription] = useState(initialTranscription);
-  const [translation, setTranslation] = useState(initialTranslation);
-  const [languageId, setLanguageId] = useState(initialLanguageId);
-
+  const [caption, setCaption] = useState(initialCaption || "");
+  const [tagsText, setTagsText] = useState((initialTags || []).join(", "));
+  const [transcription, setTranscription] = useState(
+    initialTranscription || "",
+  );
+  const [translation, setTranslation] = useState(initialTranslation || "");
+  const [languageId, setLanguageId] = useState(initialLanguageId || "");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<ReelMediaType>(initialType);
@@ -124,189 +185,114 @@ export default function EditReelForm({
   const [captionError, setCaptionError] = useState("");
   const [languageError, setLanguageError] = useState("");
   const [mediaError, setMediaError] = useState("");
-
   const [saving, setSaving] = useState(false);
   const [validatingMedia, setValidatingMedia] = useState(false);
 
-  const selectedLanguage = languages.find(
-    (language) => language._id === languageId,
-  );
+  const busy = saving || validatingMedia;
+  const selectedLanguage = languages.find((item) => item._id === languageId);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     return () => {
+      mountedRef.current = false;
+
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
     };
   }, []);
 
-  const validateMediaDuration = (
-    selectedFile: File,
-    selectedType: ReelMediaType,
-    objectUrl: string,
-  ) => {
-    return new Promise<void>((resolve, reject) => {
-      const mediaElement = document.createElement(
-        selectedType === "audio" ? "audio" : "video",
-      );
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const nextFile = input.files?.[0];
+    input.value = "";
 
-      mediaElement.preload = "metadata";
-      mediaElement.src = objectUrl;
-
-      const cleanup = () => {
-        mediaElement.removeAttribute("src");
-        mediaElement.load();
-      };
-
-      mediaElement.onloadedmetadata = () => {
-        const duration = mediaElement.duration;
-
-        cleanup();
-
-        if (!Number.isFinite(duration) || duration <= 0) {
-          reject(
-            new Error(
-              "Unable to read the selected file duration. Please choose another file.",
-            ),
-          );
-
-          return;
-        }
-
-        const maximumDuration =
-          selectedType === "audio" ? MAX_AUDIO_DURATION : MAX_VIDEO_DURATION;
-
-        if (duration > maximumDuration) {
-          reject(
-            new Error(
-              selectedType === "audio"
-                ? "Audio cannot be longer than 10 minutes."
-                : "Video cannot be longer than 5 minutes.",
-            ),
-          );
-
-          return;
-        }
-
-        resolve();
-      };
-
-      mediaElement.onerror = () => {
-        cleanup();
-
-        reject(
-          new Error(
-            "Unable to read this media file. Try MP3, WAV, M4A, AAC, MP4, MOV, or WebM.",
-          ),
-        );
-      };
-    });
-  };
-
-  const setFilePreview = (
-    nextFile: File,
-    nextType: ReelMediaType,
-    nextPreviewUrl: string,
-  ) => {
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-    }
-
-    previewUrlRef.current = nextPreviewUrl;
-
-    setFile(nextFile);
-    setMediaType(nextType);
-    setPreviewUrl(nextPreviewUrl);
-    setMediaError("");
-  };
-
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const nextFile = event.target.files?.[0];
-
-    if (!nextFile) return;
+    if (!nextFile || operationRef.current) return;
 
     const nextType = getMediaType(nextFile);
 
     if (!nextType) {
+      const message = "Choose a supported audio or video file.";
+      setMediaError(message);
+      toast.error(message);
+      return;
+    }
+
+    const maximumSize = nextType === "audio" ? MAX_AUDIO_SIZE : MAX_VIDEO_SIZE;
+
+    if (nextFile.size > maximumSize) {
       const message =
-        "Choose MP3, WAV, M4A, AAC, OGG, FLAC, MP4, MOV, or WebM.";
+        nextType === "audio"
+          ? "Audio must be no larger than 20 MB."
+          : "Video must be no larger than 200 MB.";
 
       setMediaError(message);
       toast.error(message);
-
-      event.target.value = "";
       return;
     }
 
-    if (nextType === "video" && nextFile.size > MAX_VIDEO_SIZE) {
-      const message = "Video must be under 200 MB.";
-
-      setMediaError(message);
-      toast.error(message);
-
-      event.target.value = "";
-      return;
-    }
-
-    if (nextType === "audio" && nextFile.size > MAX_AUDIO_SIZE) {
-      const message = "Audio must be under 20 MB.";
-
-      setMediaError(message);
-      toast.error(message);
-
-      event.target.value = "";
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(nextFile);
-
+    operationRef.current = true;
     setValidatingMedia(true);
     setMediaError("");
 
+    const objectUrl = URL.createObjectURL(nextFile);
+
     try {
-      await validateMediaDuration(nextFile, nextType, objectUrl);
+      await validateMediaDuration(nextType, objectUrl);
 
-      setFilePreview(nextFile, nextType, objectUrl);
+      if (!mountedRef.current) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
 
-      toast.success(
-        `${nextType === "audio" ? "Audio" : "Video"} selected successfully.`,
-      );
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+
+      previewUrlRef.current = objectUrl;
+      setFile(nextFile);
+      setMediaType(nextType);
+      setPreviewUrl(objectUrl);
+      toast.success(`${nextType === "audio" ? "Audio" : "Video"} selected.`);
     } catch (error) {
       URL.revokeObjectURL(objectUrl);
 
-      const message =
-        error instanceof Error ? error.message : "Invalid media file.";
-
-      setMediaError(message);
-      toast.error(message);
-
-      event.target.value = "";
+      if (mountedRef.current) {
+        const message =
+          error instanceof Error ? error.message : "Invalid media file.";
+        setMediaError(message);
+        toast.error(message);
+      }
     } finally {
-      setValidatingMedia(false);
+      operationRef.current = false;
+      if (mountedRef.current) setValidatingMedia(false);
     }
   };
 
   const removeReplacement = () => {
+    if (operationRef.current) return;
+
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
     }
 
     previewUrlRef.current = null;
-
     setFile(null);
     setPreviewUrl(null);
     setMediaType(initialType);
     setMediaError("");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (operationRef.current) return;
+
+    if (savedRef.current || uncertainRef.current) {
+      toast.error("Refresh the page before editing this reel again.");
+      return;
+    }
 
     const cleanedCaption = caption.trim();
 
@@ -314,8 +300,8 @@ export default function EditReelForm({
     setLanguageError("");
     setMediaError("");
 
-    if (!cleanedCaption) {
-      setCaptionError("Caption is required.");
+    if (!cleanedCaption || cleanedCaption.length > 2000) {
+      setCaptionError("Caption must contain between 1 and 2,000 characters.");
       return;
     }
 
@@ -324,17 +310,30 @@ export default function EditReelForm({
       return;
     }
 
+    if (
+      transcription.trim().length > 5000 ||
+      translation.trim().length > 5000
+    ) {
+      toast.error(
+        "Transcription and translation are limited to 5,000 characters each.",
+      );
+      return;
+    }
+
+    operationRef.current = true;
     setSaving(true);
 
     let uploadedMedia: ReelMedia | null = null;
+    let updateAttempted = false;
+    let updateRejected = false;
+    let updateSucceeded = false;
 
     try {
       let mediaToSave = initialMedia;
       let typeToSave = initialType;
 
       if (file) {
-        const uploadResult = await uploadMedia(file, "reels");
-        const uploaded = uploadResult?.[0];
+        const uploaded = (await uploadMedia(file, "reels"))?.[0];
 
         if (!uploaded?.url || !uploaded?.public_id) {
           throw new Error("Media upload did not return a valid file.");
@@ -349,31 +348,31 @@ export default function EditReelForm({
         typeToSave = mediaType;
       }
 
+      updateAttempted = true;
+
       const response = await fetch(`/api/reel/${reelId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           caption: cleanedCaption,
-
           tags: tagsText
             .split(",")
             .map((tag) => tag.trim().toLowerCase())
             .filter(Boolean),
-
           transcription: transcription.trim(),
           translation: translation.trim(),
-
           language: languageId,
-
           media: mediaToSave,
-
           type: typeToSave,
         }),
       });
 
-      const data = await response.json();
+      updateSucceeded = response.ok;
+      updateRejected = [400, 401, 403, 404].includes(response.status);
+
+      if (updateSucceeded) savedRef.current = true;
+
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data.message || "Failed to update reel.");
@@ -385,11 +384,15 @@ export default function EditReelForm({
         initialMedia.public_id !== uploadedMedia.public_id
       ) {
         try {
-          await deleteMedia(initialMedia.public_id);
-        } catch {
-          console.warn(
-            "Reel updated, but previous media cleanup failed:",
-            initialMedia.public_id,
+          const result = await deleteMedia(initialMedia.public_id);
+
+          if (!result.success) {
+            throw new Error("Previous media cleanup was not confirmed.");
+          }
+        } catch (error) {
+          console.warn("Previous reel media cleanup failed:", error);
+          toast.warning(
+            "Reel updated, but the previous media could not be removed.",
           );
         }
       }
@@ -397,53 +400,69 @@ export default function EditReelForm({
       toast.success("Reel updated successfully.");
       onSaved();
     } catch (error) {
-      if (uploadedMedia?.public_id) {
+      if (
+        uploadedMedia?.public_id &&
+        !updateSucceeded &&
+        (!updateAttempted || updateRejected)
+      ) {
         try {
-          await deleteMedia(uploadedMedia.public_id);
-        } catch {
-          console.warn(
-            "Failed to clean up replacement media:",
-            uploadedMedia.public_id,
-          );
+          const result = await deleteMedia(uploadedMedia.public_id);
+          if (!result.success) throw new Error("Replacement cleanup failed.");
+        } catch (cleanupError) {
+          console.warn("Unused replacement cleanup failed:", cleanupError);
         }
       }
 
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update reel.",
-      );
+      if (updateSucceeded) {
+        console.error("Reel saved, but UI refresh failed:", error);
+        toast.error("The reel was saved. Refresh the page to see the changes.");
+      } else if (updateAttempted && !updateRejected) {
+        uncertainRef.current = true;
+        toast.error(
+          "The update could not be confirmed. Refresh and check the reel before trying again.",
+        );
+      } else {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update reel.",
+        );
+      }
     } finally {
-      setSaving(false);
+      operationRef.current = false;
+      if (mountedRef.current) setSaving(false);
     }
   };
 
   const displayedMediaUrl = previewUrl || initialMedia.image_url;
   const displayedType = previewUrl ? mediaType : initialType;
 
+  const inputClass =
+    "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
+
+  const labelClass =
+    "mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200";
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-4 space-y-6 rounded-2xl border border-teal-200 bg-teal-50/40 p-5 dark:border-teal-900/60 dark:bg-teal-950/20"
+      className="mb-4 min-w-0 space-y-6 rounded-2xl border border-teal-200 bg-teal-50/40 p-4 dark:border-teal-900/60 dark:bg-teal-950/20 sm:p-5"
     >
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">
             Reel Editor
           </p>
-
           <h3 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
             Edit Reel
           </h3>
-
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Update reel details or replace the audio or video file.
+            Update details or replace the audio or video file.
           </p>
         </div>
-
         <button
           type="button"
           onClick={onCancel}
-          disabled={saving}
-          className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+          disabled={busy}
+          className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           Close
         </button>
@@ -451,41 +470,22 @@ export default function EditReelForm({
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Audio or Video
-          </label>
-
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-              displayedType === "audio"
-                ? "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300"
-                : "bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300"
-            }`}
-          >
+          <h4 className={labelClass}>Audio or Video</h4>
+          <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold uppercase text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
             {displayedType}
           </span>
         </div>
 
         {displayedType === "audio" ? (
           <div className="rounded-2xl bg-gradient-to-br from-teal-950 via-cyan-950 to-slate-950 p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-500 text-lg">
-                🎵
-              </div>
-
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-white">
-                  {file?.name || "Current audio reel"}
-                </p>
-
-                {file && (
-                  <p className="text-xs text-slate-300">
-                    {formatFileSize(file.size)}
-                  </p>
-                )}
-              </div>
-            </div>
-
+            <p className="mb-2 truncate font-semibold text-white">
+              {file?.name || "Current audio reel"}
+            </p>
+            {file && (
+              <p className="mb-3 text-xs text-slate-300">
+                {formatFileSize(file.size)}
+              </p>
+            )}
             <audio controls src={displayedMediaUrl} className="w-full" />
           </div>
         ) : (
@@ -501,8 +501,8 @@ export default function EditReelForm({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={saving || validatingMedia}
-            className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
+            disabled={busy}
+            className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-700"
           >
             {validatingMedia
               ? "Checking File..."
@@ -515,8 +515,8 @@ export default function EditReelForm({
             <button
               type="button"
               onClick={removeReplacement}
-              disabled={saving || validatingMedia}
-              className="rounded-xl bg-slate-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:opacity-50"
+              disabled={busy}
+              className="rounded-xl bg-slate-500 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-600 disabled:opacity-50"
             >
               Keep Current Media
             </button>
@@ -527,154 +527,154 @@ export default function EditReelForm({
           ref={fileInputRef}
           type="file"
           accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,.mp4,.webm,.mov,.ogv,.avi"
+          disabled={busy}
           onChange={handleFileChange}
           className="hidden"
         />
 
         <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-          Video: MP4, MOV, WebM — maximum 200 MB and 5 minutes.
+          Video: maximum 200 MB and 5 minutes.
           <br />
-          Audio: MP3, WAV, M4A, AAC, OGG, FLAC — maximum 20 MB and 10 minutes.
+          Audio: maximum 20 MB and 10 minutes.
         </p>
 
         {mediaError && (
-          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+          <p
+            role="alert"
+            className="mt-2 text-sm text-red-600 dark:text-red-400"
+          >
             {mediaError}
           </p>
         )}
       </section>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label htmlFor={`${formId}-caption`} className={labelClass}>
           Caption
         </label>
-
         <textarea
+          id={`${formId}-caption`}
           value={caption}
           onChange={(event) => {
             setCaption(event.target.value);
             setCaptionError("");
           }}
+          disabled={busy}
           rows={3}
           maxLength={2000}
+          dir="auto"
           placeholder="Write a caption..."
-          className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 dark:bg-slate-900 dark:text-white ${
-            captionError
-              ? "border-red-500"
-              : "border-slate-300 dark:border-slate-700"
-          }`}
+          aria-invalid={Boolean(captionError)}
+          className={inputClass}
         />
-
         {captionError && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+          <p
+            role="alert"
+            className="mt-1 text-sm text-red-600 dark:text-red-400"
+          >
             {captionError}
           </p>
         )}
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
-          Tags
-          <span className="ml-2 text-xs font-normal text-slate-500">
-            Comma separated
-          </span>
+        <label htmlFor={`${formId}-tags`} className={labelClass}>
+          Tags <span className="text-xs font-normal">— comma separated</span>
         </label>
-
         <input
+          id={`${formId}-tags`}
           value={tagsText}
           onChange={(event) => setTagsText(event.target.value)}
+          disabled={busy}
+          dir="auto"
           placeholder="culture, music, vocabulary"
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
-          Transcription
-          <span className="ml-2 text-xs font-normal text-slate-500">
-            Optional
-          </span>
+        <label htmlFor={`${formId}-transcription`} className={labelClass}>
+          Transcription (optional)
         </label>
-
         <textarea
+          id={`${formId}-transcription`}
           value={transcription}
           onChange={(event) => setTranscription(event.target.value)}
+          disabled={busy}
           rows={4}
-          placeholder="Optional transcription..."
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          maxLength={5000}
+          dir="auto"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
-          English Translation
-          <span className="ml-2 text-xs font-normal text-slate-500">
-            Optional
-          </span>
+        <label htmlFor={`${formId}-translation`} className={labelClass}>
+          English Translation (optional)
         </label>
-
         <textarea
+          id={`${formId}-translation`}
           value={translation}
           onChange={(event) => setTranslation(event.target.value)}
+          disabled={busy}
           rows={4}
-          placeholder="Optional English translation..."
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          maxLength={5000}
+          lang="en"
+          dir="ltr"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label htmlFor={`${formId}-language`} className={labelClass}>
           Language
         </label>
-
         <select
+          id={`${formId}-language`}
           value={languageId}
           onChange={(event) => {
             setLanguageId(event.target.value);
             setLanguageError("");
           }}
-          className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-teal-500 dark:bg-slate-900 dark:text-white ${
-            languageError
-              ? "border-red-500"
-              : "border-slate-300 dark:border-slate-700"
-          }`}
+          disabled={busy}
+          aria-invalid={Boolean(languageError)}
+          className={inputClass}
         >
           <option value="">Select a language...</option>
-
           {languages.map((language) => (
             <option key={language._id} value={language._id}>
               {language.name}
             </option>
           ))}
         </select>
-
         {selectedLanguage && (
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Selected: {selectedLanguage.name}
           </p>
         )}
-
         {languageError && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+          <p
+            role="alert"
+            className="mt-1 text-sm text-red-600 dark:text-red-400"
+          >
             {languageError}
           </p>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3 pt-1">
+      <div className="flex flex-wrap gap-3">
         <button
           type="submit"
-          disabled={saving || validatingMedia}
-          className="rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busy}
+          className="rounded-xl bg-teal-600 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Changes"}
         </button>
-
         <button
           type="button"
           onClick={onCancel}
-          disabled={saving}
-          className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+          disabled={busy}
+          className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Cancel
         </button>

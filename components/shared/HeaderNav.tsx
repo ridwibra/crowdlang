@@ -66,7 +66,7 @@ export default function HeaderNav() {
         className={`flex items-center gap-2 transition ${
           isMapActive
             ? "font-semibold text-blue-600 dark:text-blue-400"
-            : "hover:text-blue-600 dark:text-blue-400"
+            : "hover:text-blue-600 dark:hover:text-blue-400"
         }`}
       >
         <Map size={20} />

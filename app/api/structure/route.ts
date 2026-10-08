@@ -15,7 +15,7 @@ import { UserType } from "@/utils/types";
 
 const MAX_STRUCTURES_PER_LANGUAGE = 5;
 
-const STRUCTURE_STATUSES = ["draft", "published", "archived"] as const;
+const STRUCTURE_STATUSES = ["draft", "publish"] as const;
 
 const writingDirectionSet = new Set<string>(WRITING_DIRECTIONS);
 const constituentSet = new Set<string>(CONSTITUENT_TYPES);
