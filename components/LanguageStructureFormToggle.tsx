@@ -4,37 +4,252 @@ import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-const MAX_PARTS = 12;
+const MAX_PARTS = 25;
 
 const DIRECTIONS = [
-  ["left-to-right", "Left to right", "Text runs from left to right."],
-  ["right-to-left", "Right to left", "Text runs from right to left."],
-  ["top-to-bottom", "Top to bottom", "Text runs downwards."],
-  ["bottom-to-top", "Bottom to top", "Text runs upwards."],
+  [
+    "left-to-right",
+    "Left to right",
+    "Text runs horizontally from left to right within each line.",
+  ],
+  [
+    "right-to-left",
+    "Right to left",
+    "Text runs horizontally from right to left within each line.",
+  ],
+  [
+    "top-to-bottom",
+    "Top to bottom",
+    "Text runs vertically from top to bottom within each column; column order is unspecified.",
+  ],
+  [
+    "bottom-to-top",
+    "Bottom to top",
+    "Text runs vertically from bottom to top within each column; column order is unspecified.",
+  ],
+  [
+    "top-to-bottom-right-to-left",
+    "Top to bottom; columns right to left",
+    "Text runs down each column, with successive columns positioned to the left.",
+  ],
+  [
+    "top-to-bottom-left-to-right",
+    "Top to bottom; columns left to right",
+    "Text runs down each column, with successive columns positioned to the right.",
+  ],
+  [
+    "bottom-to-top-right-to-left",
+    "Bottom to top; columns right to left",
+    "Text runs up each column, with successive columns positioned to the left.",
+  ],
+  [
+    "bottom-to-top-left-to-right",
+    "Bottom to top; columns left to right",
+    "Text runs up each column, with successive columns positioned to the right.",
+  ],
   [
     "boustrophedon",
-    "Alternating lines",
-    "Successive lines alternate direction.",
+    "Boustrophedon / alternating lines",
+    "Successive horizontal lines alternate between left-to-right and right-to-left directions.",
   ],
-  ["mixed", "Mixed directions", "Direction depends on the writing context."],
+  [
+    "bidirectional",
+    "Bidirectional text",
+    "Left-to-right and right-to-left text occur within the same passage, with a primary direction governing the overall layout.",
+  ],
+  [
+    "mixed",
+    "Mixed directions",
+    "Different writing directions or layouts are used depending on the script, passage, or writing context.",
+  ],
+  [
+    "unspecified",
+    "Unspecified direction",
+    "The writing direction has not been recorded or established.",
+  ],
 ] as const;
 
 const PARTS = [
-  ["subject", "Subject", "The person or thing the clause is about."],
-  ["verb", "Verb / predicate", "The action, state, or predicate."],
-  ["object", "Direct object", "A direct object of the verb."],
-  ["indirect-object", "Indirect object", "Often a recipient or beneficiary."],
-  ["complement", "Complement", "A phrase completing the meaning."],
-  ["adverbial", "Adverbial", "Information such as time, place, or manner."],
-  ["auxiliary", "Auxiliary", "A helping verb."],
-  ["topic", "Topic", "What the statement is framed around."],
-  ["focus", "Focus", "The information being highlighted."],
-  ["noun-phrase", "Noun phrase", "A noun and words associated with it."],
-  ["adjective", "Adjective / adjectival phrase", "A description of a noun."],
-  ["adposition", "Adposition", "A preposition or postposition."],
-  ["particle", "Particle", "A grammatical particle."],
-  ["classifier", "Classifier", "A classifier used with a noun."],
-  ["other", "Other sentence part", "Another grammatical element."],
+  [
+    "subject",
+    "Subject",
+    "A grammatical argument of the predicate; it is not necessarily the topic or the person performing an action.",
+  ],
+  [
+    "verb",
+    "Verb",
+    "A word expressing an action, event, or state; distinct from the larger predicate.",
+  ],
+  [
+    "predicate",
+    "Predicate",
+    "The expression that attributes an action, event, property, or state to the subject; it may be verbal or nonverbal.",
+  ],
+  [
+    "object",
+    "Direct object",
+    "A core argument of a transitive verb, distinct from the subject; often the entity affected by the event.",
+  ],
+  [
+    "indirect-object",
+    "Indirect object",
+    "A core argument distinct from the subject and direct object, often expressing a recipient; its identification depends on the language.",
+  ],
+  [
+    "complement",
+    "Complement",
+    "An expression selected by a word or construction to complete its grammatical structure or meaning; complements can include objects and clauses.",
+  ],
+  [
+    "predicative-complement",
+    "Predicative complement",
+    "An expression attributing a property, identity, or state to a subject or object, such as 'happy' in 'She is happy'.",
+  ],
+  [
+    "adverbial",
+    "Adverbial",
+    "An expression providing information such as time, place, manner, reason, or frequency; it need not be an adverb.",
+  ],
+  [
+    "auxiliary",
+    "Auxiliary",
+    "A grammatical verb or marker accompanying a predicate and expressing information such as tense, aspect, mood, or voice.",
+  ],
+  [
+    "copula",
+    "Copula",
+    "A linking element connecting a subject with a nonverbal predicate, such as 'is' in 'She is a teacher'.",
+  ],
+  [
+    "topic",
+    "Topic",
+    "The entity or matter about which an utterance provides information; it need not be the grammatical subject.",
+  ],
+  [
+    "focus",
+    "Focus",
+    "The part of an utterance highlighted as informative or contrastive in its context.",
+  ],
+  [
+    "noun",
+    "Noun",
+    "A word typically referring to an entity, place, substance, event, or abstract concept.",
+  ],
+  [
+    "proper-noun",
+    "Proper noun",
+    "A noun used as the name of a particular person, place, organization, or other entity.",
+  ],
+  [
+    "pronoun",
+    "Pronoun",
+    "A word that can function as a noun phrase and refer to participants or entities, such as 'I', 'you', or 'they'.",
+  ],
+  [
+    "noun-phrase",
+    "Noun phrase",
+    "A phrase centered on a noun or pronoun, alone or with dependents; it can function as a subject, object, or another constituent.",
+  ],
+  [
+    "verb-phrase",
+    "Verb phrase",
+    "A phrase centered on a verb, possibly including auxiliaries, complements, and modifiers; its boundaries depend on the grammatical analysis.",
+  ],
+  [
+    "adjective",
+    "Adjective / adjective phrase",
+    "An adjective, alone or with dependents, expressing a property; it may modify a noun or function predicatively.",
+  ],
+  [
+    "adverb",
+    "Adverb / adverb phrase",
+    "An adverb, alone or with dependents, modifying a verb, adjective, another adverb, or a clause.",
+  ],
+  [
+    "determiner",
+    "Determiner",
+    "A word specifying the reference of a noun phrase, such as an article or a demonstrative used with a noun.",
+  ],
+  [
+    "numeral",
+    "Numeral",
+    "A word or expression indicating a number or numerical quantity.",
+  ],
+  [
+    "possessor",
+    "Possessor",
+    "An expression identifying an entity associated with another, often through ownership, kinship, or a part-whole relationship.",
+  ],
+  [
+    "adposition",
+    "Adposition",
+    "A grammatical word, such as a preposition or postposition, expressing a relation between its complement and another element.",
+  ],
+  [
+    "adpositional-phrase",
+    "Adpositional phrase",
+    "A phrase consisting of an adposition and its complement, such as 'in the house'.",
+  ],
+  [
+    "coordinating-conjunction",
+    "Coordinating conjunction",
+    "A word linking words, phrases, or clauses without making one subordinate to the other, such as 'and' or 'or'.",
+  ],
+  [
+    "subordinating-conjunction",
+    "Subordinating conjunction",
+    "A word introducing or linking a subordinate clause, such as 'because' or 'although'.",
+  ],
+  [
+    "relative-clause",
+    "Relative clause",
+    "A clause modifying a noun or nominal expression, such as 'that I bought' in 'the book that I bought'.",
+  ],
+  [
+    "complement-clause",
+    "Complement clause",
+    "A clause functioning as a complement, such as 'that she left' in 'I know that she left'.",
+  ],
+  [
+    "adverbial-clause",
+    "Adverbial clause",
+    "A clause functioning as an adverbial, expressing a relation such as time, condition, reason, or concession.",
+  ],
+  [
+    "negation-marker",
+    "Negation marker",
+    "A word, particle, or affix expressing negation; it may be a separate word or part of another word.",
+  ],
+  [
+    "question-marker",
+    "Question marker",
+    "A word, particle, or affix marking a question; not all languages use an explicit question marker.",
+  ],
+  [
+    "particle",
+    "Particle",
+    "A grammatical word whose specific function depends on the language, such as marking emphasis or a discourse relation.",
+  ],
+  [
+    "classifier",
+    "Classifier",
+    "A grammatical element classifying a noun or its referent, often used in counting or other noun-related constructions.",
+  ],
+  [
+    "vocative",
+    "Vocative",
+    "An expression directly addressing someone, such as 'Maria' in 'Maria, come here'.",
+  ],
+  [
+    "interjection",
+    "Interjection",
+    "A word or expression conveying a reaction, emotion, or interactional response, such as 'oh' or 'wow'.",
+  ],
+  [
+    "other",
+    "Other sentence part",
+    "Another grammatical element; describe its form and function in the notes.",
+  ],
 ] as const;
 
 type Direction = (typeof DIRECTIONS)[number][0];
