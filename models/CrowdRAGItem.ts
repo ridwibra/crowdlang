@@ -93,7 +93,18 @@ const ragSchema = new Schema(
 
 ragSchema.index({ sourceType: 1, sourceId: 1 });
 ragSchema.index({ language: 1, sourceType: 1 });
-ragSchema.index({ title: "text", keywords: "text", text: "text" });
+ragSchema.index(
+  {
+    title: "text",
+    keywords: "text",
+    text: "text",
+  },
+  {
+    default_language: "none",
+    language_override: "ragLanguage",
+    name: "crowdrag_text_search",
+  },
+);
 
 const CrowdRAGItem =
   mongoose.models.CrowdRAGItem ||
