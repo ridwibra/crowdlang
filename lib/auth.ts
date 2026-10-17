@@ -14,8 +14,8 @@ export const auth = betterAuth({
   baseURL: process.env.BASE_URL,
  trustedOrigins: [
   
-  "https://crowdlang.org",
-  "https://www.crowdlang.org",
+  "https://crowdlangs.org",
+  "https://www.crowdlangs.org",
   "http://localhost:3000",
   ],
 
