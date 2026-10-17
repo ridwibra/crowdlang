@@ -48,17 +48,66 @@ export const uploadMedia = async (
       signal,
     });
 
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      throw new Error("Upload failed: invalid server response");
-    }
+  let payload: unknown;
 
-    if (!response.ok) {
-      const error = payload as CloudinaryError;
-      throw new Error(error.message || "Upload failed");
-    }
+try {
+  payload = await response.json();
+} catch {
+  if (response.status === 413) {
+    throw new Error(
+      "Your file is too large for the upload service. Compress it or choose a smaller file, then try again.",
+    );
+  }
+
+  if (response.status === 415) {
+    throw new Error(
+      "The upload service does not support this file format. Try MP4 for video or MP3 for audio.",
+    );
+  }
+
+  if (response.status === 408 || response.status === 504) {
+    throw new Error(
+      "The upload request timed out. Please try again or choose a smaller file.",
+    );
+  }
+
+  if (response.status >= 500) {
+    throw new Error(
+      "The upload service encountered a server error. Please try again shortly.",
+    );
+  }
+
+  throw new Error(
+    `The upload service returned an unexpected response (HTTP ${response.status}). Please try again.`,
+  );
+}
+
+if (!response.ok) {
+  const error = payload as CloudinaryError | null;
+
+  const serverMessage =
+    typeof error?.message === "string" ? error.message.trim() : "";
+
+  if (serverMessage) {
+    throw new Error(serverMessage);
+  }
+
+  if (response.status === 413) {
+    throw new Error(
+      "Your file is too large for the upload service. Compress it or choose a smaller file, then try again.",
+    );
+  }
+
+  if (response.status === 415) {
+    throw new Error(
+      "The upload service does not support this file format. Try MP4 for video or MP3 for audio.",
+    );
+  }
+
+  throw new Error(
+    `The upload could not be completed (HTTP ${response.status}). Please try again.`,
+  );
+}
 
     return payload as CloudinaryResponse[];
   } finally {
