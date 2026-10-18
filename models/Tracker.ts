@@ -1,47 +1,176 @@
 import mongoose, { Schema } from "mongoose";
 
-const trackerSchema = new Schema({
-  sessionId: { type: String, required: true },
+const trackerSchema = new Schema(
+  {
+    sessionId: {
+      type: String,
+      required: true,
+      maxlength: 200,
+    },
 
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: false },
-  isAuthenticated: { type: Boolean, default: false },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
 
-  actionType: { type: String, required: true },
+    isAuthenticated: {
+      type: Boolean,
+      default: false,
+    },
 
-  pathname: { type: String, required: true },
-  duration: { type: Number },
-  startTime: { type: Date },
-  endTime: { type: Date },
+    actionType: {
+      type: String,
+      required: true,
+      maxlength: 100,
+    },
 
-  // Reels
-  reelId: { type: Schema.Types.ObjectId, ref: "Reel" },
-  mediaType: { type: String },
-  playDuration: { type: Number },
-  completionRate: { type: Number },
-  interactionType: { type: String },
+    pathname: {
+      type: String,
+      required: true,
+      maxlength: 2048,
+    },
 
-  // Maps
-  selectedLanguage: { type: String },
-  derivedCountries: { type: [String] },
-  region: { type: String },
-  zoomLevel: { type: Number },
-  mapMode: { type: String },
+    // Durations are expected to be seconds.
+    duration: {
+      type: Number,
+      min: 0,
+    },
 
-  // Linguistic resources (homepage + language pages)
-  resourceType: { type: String, enum: ["language", "alphabet", "essay", "table"] },
-  resourceId: { type: Schema.Types.ObjectId },
-  language: { type: String },
-  interactionMetadata: { type: Schema.Types.Mixed },
+    startTime: {
+      type: Date,
+    },
 
-  // Device info
-  ip: { type: String },
-  userAgent: { type: String },
-  device: { type: String },
-  browser: { type: String },
-  os: { type: String },
+    endTime: {
+      type: Date,
+    },
 
-}, { timestamps: true });
+    // Reels
+    reelId: {
+      type: Schema.Types.ObjectId,
+      ref: "Reel",
+    },
 
-const Tracker = mongoose.models.Tracker || mongoose.model("Tracker", trackerSchema);
+    mediaType: {
+      type: String,
+      maxlength: 100,
+    },
 
-export default Tracker
+    playDuration: {
+      type: Number,
+      min: 0,
+    },
+
+    completionRate: {
+      type: Number,
+      min: 0,
+    },
+
+    interactionType: {
+      type: String,
+      maxlength: 100,
+    },
+
+    // Maps: these describe the map interaction.
+    selectedLanguage: {
+      type: String,
+      maxlength: 200,
+    },
+
+    derivedCountries: {
+      type: [String],
+      default: undefined,
+    },
+
+    region: {
+      type: String,
+      maxlength: 200,
+    },
+
+    zoomLevel: {
+      type: Number,
+    },
+
+    mapMode: {
+      type: String,
+      maxlength: 100,
+    },
+
+    // Linguistic resources
+    resourceType: {
+      type: String,
+      enum: ["language", "alphabet", "essay", "table"],
+    },
+
+    resourceId: {
+      type: Schema.Types.ObjectId,
+    },
+
+    language: {
+      type: String,
+      maxlength: 200,
+    },
+
+    interactionMetadata: {
+      type: Schema.Types.Mixed,
+    },
+
+    // Device information
+    // Retained for compatibility; the API below does not collect raw IPs.
+    ip: {
+      type: String,
+    },
+
+    userAgent: {
+      type: String,
+      maxlength: 2000,
+    },
+
+    device: {
+      type: String,
+      maxlength: 200,
+    },
+
+    browser: {
+      type: String,
+      maxlength: 200,
+    },
+
+    os: {
+      type: String,
+      maxlength: 200,
+    },
+
+    // Approximate visitor location, not map-selected countries.
+    countryCode: {
+      type: String,
+      default: "",
+      maxlength: 2,
+    },
+
+    country: {
+      type: String,
+      default: "",
+      maxlength: 200,
+    },
+
+    city: {
+      type: String,
+      default: "",
+      maxlength: 200,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+trackerSchema.index({ createdAt: -1 });
+trackerSchema.index({ userId: 1, createdAt: -1 });
+trackerSchema.index({ sessionId: 1, createdAt: -1 });
+
+const Tracker =
+  mongoose.models.Tracker ||
+  mongoose.model("Tracker", trackerSchema);
+
+export default Tracker;
